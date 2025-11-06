@@ -23,7 +23,7 @@ resource "google_secret_manager_secret_version" "ssh_keypair_version" {
 resource "google_compute_project_metadata" "metadata_keypair" {
   project = var.gcloud_project_id
   metadata = {
-    ssh-keys = "bitwarden:${tls_private_key.keypair.public_key_openssh}"
+    ssh-keys = "vscode:${tls_private_key.keypair.public_key_openssh}"
   }
 }
 
@@ -41,19 +41,11 @@ resource "local_file" "file_startup" {
     allowed_countries   = jsonencode(var.allowed_countries)
     oauth_client_id     = var.oauth_client_id
     oauth_client_secret = var.oauth_client_secret
-    bw_installation_id  = var.bw_installation_id
-    bw_installation_key = var.bw_installation_key
-    bw_db_password      = var.bw_db_password
-    bw_smtp_host        = var.bw_smtp_host
-    bw_smtp_port        = var.bw_smtp_port
-    bw_smtp_ssl         = var.bw_smtp_ssl
-    bw_smtp_username    = var.bw_smtp_username
-    bw_smtp_password    = var.bw_smtp_password
   })
 }
 
-resource "google_compute_instance" "instance_bitwarden" {
-  name         = local.instance_bitwarden_name
+resource "google_compute_instance" "instance_vscode" {
+  name         = local.instance_vscode_name
   project      = var.gcloud_project_id
   machine_type = "e2-small"
   zone          = data.google_compute_zones.available.names[0]
@@ -63,7 +55,7 @@ resource "google_compute_instance" "instance_bitwarden" {
   }
   boot_disk {
     auto_delete = false
-    device_name = local.disk_bitwarden_name
+    device_name = local.disk_vscode_name
     initialize_params {
       image = "projects/ubuntu-os-cloud/global/images/ubuntu-minimal-2404-noble-amd64-v20251002"
       size  = 25
@@ -95,13 +87,13 @@ resource "google_compute_instance" "instance_bitwarden" {
   reservation_affinity {
     type = "NO_RESERVATION"
   }
-  tags = [local.instance_bitwarden_name]
+  tags = [local.instance_vscode_name]
 }
 
 # Snapshot
 
 resource "google_compute_resource_policy" "snapshot_policy" {
-  name   = local.snapshot_bitwarden_name
+  name   = local.snapshot_vscode_name
   project = var.gcloud_project_id
   snapshot_schedule_policy {
     schedule {
@@ -119,17 +111,17 @@ resource "google_compute_resource_policy" "snapshot_policy" {
 
 resource "google_compute_disk_resource_policy_attachment" "disk_policy_attachment" {
   name    = google_compute_resource_policy.snapshot_policy.name
-  disk    = google_compute_instance.instance_bitwarden.name
+  disk    = google_compute_instance.instance_vscode.name
   zone    = data.google_compute_zones.available.names[0]
   project = var.gcloud_project_id
 
-  depends_on = [google_compute_instance.instance_bitwarden]
+  depends_on = [google_compute_instance.instance_vscode]
 }
 
 # Firewall
 
 resource "google_compute_firewall" "allow_lb_hc" {
-  name    = local.firewall_bitwarden_name
+  name    = local.firewall_vscode_name
   project = var.gcloud_project_id
   network = "default"
   direction = "INGRESS"
@@ -139,13 +131,13 @@ resource "google_compute_firewall" "allow_lb_hc" {
     ports    = ["80", "443"]
   }
   source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
-  target_tags   = [local.instance_bitwarden_name]
+  target_tags   = [local.instance_vscode_name]
 }
 
 # Cloud armor
 
 resource "google_compute_security_policy" "cloudarmor_main" {
-  name        = local.cloudarmor_bitwarden_name
+  name        = local.cloudarmor_vscode_name
   rule {
     priority    = 1000
     description = "Allow specified countries"
@@ -171,10 +163,10 @@ resource "google_compute_security_policy" "cloudarmor_main" {
 
 # Instancegroup
 
-resource "google_compute_instance_group" "instancegroup_bitwarden" {
-  name        = local.instancegroup_bitwarden_name
+resource "google_compute_instance_group" "instancegroup_vscode" {
+  name        = local.instancegroup_vscode_name
   zone     = data.google_compute_zones.available.names[0]
-  instances   = [google_compute_instance.instance_bitwarden.self_link]
+  instances   = [google_compute_instance.instance_vscode.self_link]
   named_port {
     name = "https"
     port = 443
@@ -198,7 +190,7 @@ resource "google_compute_health_check" "healthcheck_https" {
 # Backend Service
 
 resource "google_compute_backend_service" "backend_main" {
-  name                  = local.backend_bitwarden_name
+  name                  = local.backend_vscode_name
   protocol              = "HTTPS"
   port_name             = "https"
   health_checks         = [google_compute_health_check.healthcheck_https.id]
@@ -206,7 +198,7 @@ resource "google_compute_backend_service" "backend_main" {
   load_balancing_scheme = "EXTERNAL"
   security_policy = google_compute_security_policy.cloudarmor_main.id
   backend {
-    group           = google_compute_instance_group.instancegroup_bitwarden.self_link
+    group           = google_compute_instance_group.instancegroup_vscode.self_link
     balancing_mode  = "UTILIZATION"
     capacity_scaler = 1.0
   }
@@ -216,14 +208,14 @@ resource "google_compute_backend_service" "backend_main" {
 # Urlmap
 
 resource "google_compute_url_map" "urlmap_main" {
-  name            = local.urlmap_bitwarden_name
+  name            = local.urlmap_vscode_name
   default_service = google_compute_backend_service.backend_main.id
 }
 
 # SSL
 
 resource "google_compute_managed_ssl_certificate" "ssl_main" {
-  name = local.ssl_bitwarden_name
+  name = local.ssl_vscode_name
   managed {
     domains = [var.domain]
   }
@@ -232,17 +224,17 @@ resource "google_compute_managed_ssl_certificate" "ssl_main" {
 # ALB
 
 resource "google_compute_global_address" "lb_ip" {
-  name = local.lbip_bitwarden_name
+  name = local.lbip_vscode_name
 }
 
 resource "google_compute_target_https_proxy" "lbtarget_main" {
-  name             = local.lbtarget_bitwarden_name
+  name             = local.lbtarget_vscode_name
   url_map          = google_compute_url_map.urlmap_main.id
   ssl_certificates = [google_compute_managed_ssl_certificate.ssl_main.id]
 }
 
 resource "google_compute_global_forwarding_rule" "lb_rule" {
-  name                  = local.lbrule_bitwarden_name
+  name                  = local.lbrule_vscode_name
   target                = google_compute_target_https_proxy.lbtarget_main.id
   port_range            = "443"
   load_balancing_scheme = "EXTERNAL"
@@ -251,7 +243,7 @@ resource "google_compute_global_forwarding_rule" "lb_rule" {
 
 # Record
 
-output "bitwarden_lb_ip" {
+output "vscode_lb_ip" {
   description = "Public IP address of the HTTPS Load Balancer"
   value       = google_compute_global_address.lb_ip.address
 }
