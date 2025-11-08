@@ -61,14 +61,17 @@
         - name: Create vscode user
           user:
             name: code
-            uid: 1000
-            gid: 1000
             shell: /bin/bash
             home: /opt/code-server
             create_home: no
             groups: docker
             append: yes
             state: present
+
+        - name: Set UID/GID as facts
+          set_fact:
+            code_user_uid: "{{ code_uid.stdout }}"
+            code_user_gid: "{{ code_gid.stdout }}"
 
         - name: Create Code directories
           file:
@@ -348,6 +351,7 @@
                     context: .
                     dockerfile: Dockerfile
                   container_name: code-server
+                  user: "{{ code_uid.stdout }}:{{ code_gid.stdout }}"
                   volumes:
                     - /opt/code-server/workspace:/home/coder/workspace
                     - /opt/code-server/config/vscode-user:/home/coder/.local/share/code-server/User
