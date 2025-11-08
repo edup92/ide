@@ -312,7 +312,7 @@
               OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE=/etc/oauth2_proxy/allowed_emails.txt
               OAUTH2_PROXY_TLS_CERT_FILE=/ssl/fullchain.pem
               OAUTH2_PROXY_TLS_KEY_FILE=/ssl/privkey.pem
-              OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+              OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:443
               OAUTH2_PROXY_UPSTREAMS=http://code:8443
               OAUTH2_PROXY_COOKIE_SECURE=true
               OAUTH2_PROXY_SET_XAUTHREQUEST=true
@@ -351,7 +351,7 @@
                   container_name: code-oauth2-proxy
                   restart: unless-stopped
                   ports:
-                    - "443:4180" # único puerto público expuesto
+                    - "443:443"
                   networks:
                     - code-net
                   volumes:
