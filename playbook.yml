@@ -176,14 +176,6 @@
             group: code
             mode: "0644"
 
-        - name: Fix ownership for VSCode data
-          file:
-            path: /opt/code-server/config/vscode-user
-            owner: code
-            group: code
-            mode: "0775"
-            recurse: true
-
     - name: Create docker config files
       block:
         - name: Ensure cookie secret file exists
@@ -274,7 +266,6 @@
             group: code
             mode: "0755"
             content: |
-
               #!/bin/bash
 
               # --- Configurar SSH para GitHub ---
