@@ -99,7 +99,7 @@
             path: "{{ item }}"
             owner: code
             group: code
-            mode: "0600"
+            mode: "0644"
           loop:
             - /opt/code-server/ssl/privkey.pem
             - /opt/code-server/ssl/fullchain.pem
