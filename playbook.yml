@@ -79,7 +79,7 @@
             - { path: "/opt/code-server", mode: "0700" }
             - { path: "/opt/code-server/docker", mode: "0755" }
             - { path: "/opt/code-server/ssl", mode: "0755" }
-            - { path: "/opt/code-server/workspace", mode: "0755" }
+            - { path: "/opt/code-server/workspace", mode: "0775" }
             - { path: "/opt/code-server/config", mode: "0755" }
             - { path: "/opt/code-server/env", mode: "0755" }
 
@@ -337,9 +337,9 @@
                     dockerfile: Dockerfile
                   container_name: code-server
                   volumes:
-                    - ../workspace:/home/coder/workspace
-                    - ../config/vscode-settings.json:/home/coder/.local/share/code-server/User/settings.json
-                    - ../config/github_pem:/home/coder/config/github_pem
+                    - /opt/code-server/workspace:/home/coder/workspace
+                    - /opt/code-server/config/vscode-user:/home/coder/.local/share/code-server/User
+                    - /opt/code-server/config/github_pem:/home/coder/config/github_pem
                     - ./entrypoint.sh:/entrypoint.sh
                   entrypoint: ["/entrypoint.sh"]
                   networks:
