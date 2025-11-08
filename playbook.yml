@@ -177,10 +177,19 @@
 
     - name: Create docker config files
       block:
-        - name: Generate oauth proxy cookie secret
+        - name: Ensure cookie secret file exists
+          copy:
+            dest: /opt/code-server/docker/oauth_cookie_secret.txt
+            content: "{{ lookup('pipe', 'openssl rand -base64 48 | tr -dc A-Za-z0-9 | head -c 32') }}"
+            owner: code
+            group: code
+            mode: "0600"
+            force: no
+
+        - name: Read cookie secret from file
           set_fact:
-            oauth_cookie_secret: "{{ lookup('pipe', 'openssl rand -base64 32 | tr -dc A-Za-z0-9 | head -c 32') }}"
-          no_log: true
+            oauth_cookie_secret: "{{ lookup('file', '/opt/code-server/config/oauth_cookie_secret.txt') }}"
+
 
         - name: Generate oauth proxy allowed accounts
           copy:
