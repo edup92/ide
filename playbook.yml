@@ -259,6 +259,10 @@
               RUN useradd -m coder && \
                   echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-coder
 
+              ARG UID={{ code_user.uid }}
+              ARG GID={{ code_user.group }}
+              RUN groupmod -g $GID coder && usermod -u $UID -g $GID coder
+
               USER coder
               WORKDIR /home/coder
 
