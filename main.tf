@@ -82,15 +82,23 @@ resource "null_resource" "run_ansible" {
     playbook_hash = filesha256("${path.module}/playbook.yml")
   }
   provisioner "local-exec" {
+    environment = {
+      SSH_KEY = tls_private_key.keypair.private_key_pem
+    }
     command = <<EOT
-      KEY_FILE="/tmp/ssh_key"
-      printf "%s" '${tls_private_key.keypair.private_key_pem}' > "$KEY_FILE"
+      KEY_FILE="/tmp/terraform_ssh_key"
+
+      printf "%s" "$SSH_KEY" > "$KEY_FILE"
       chmod 600 "$KEY_FILE"
-      ansible-playbook -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
-      --user ubuntu \
-      --private-key "$KEY_FILE" \
-      --extra-vars "@${path.module}/vars.json" \
-      playbook.yml
+
+      ansible-playbook \
+        -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
+        --user ubuntu \
+        --private-key "$KEY_FILE" \
+        --extra-vars "@${path.module}/vars.json" \
+        playbook.yml
+
+      rm -f "$KEY_FILE"
     EOT
   }
 }
