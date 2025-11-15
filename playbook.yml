@@ -191,6 +191,7 @@
                     wget \
                     git \
                     gnupg \
+                    nano \ 
                     lsb-release \
                     ca-certificates \
                     software-properties-common \
@@ -248,23 +249,26 @@
             content: |
               #!/bin/bash
 
-              # --- Configurar SSH para GitHub ---
+              # Crear ~/.ssh si no existe
               mkdir -p /home/coder/.ssh
 
-              # El PEM ahora está en /opt/code-server/config/github_pem
-              chmod 600 /opt/code-server/config/github_pem
+              # Copiar clave privada generada por Terraform/Ansible
+              cp /opt/code-server/config/github_pem /home/coder/.ssh/id_rsa
+              chmod 600 /home/coder/.ssh/id_rsa
 
-              ln -sf /opt/code-server/config/github_pem /home/coder/.ssh/github_pem
-
+              # Configurar SSH para GitHub
               cat > /home/coder/.ssh/config <<'EOF'
               Host github.com
-                IdentityFile ~/.ssh/github_pem
+                IdentityFile ~/.ssh/id_rsa
                 StrictHostKeyChecking no
               EOF
 
+              # Ajustar permisos y dueño
+              chown -R coder:coder /home/coder/.ssh
+
               # --- Configurar Git global ---
               git config --global user.name "code-server"
-              git config --global user.email "code@localhost"
+              git config --global user.email "{{ admin_email }}"
               git config --global commit.template /workspaces/vscode/.devcontainer/.gitmessage.txt
 
               # --- Instalar extensiones de VSCode ---
