@@ -131,8 +131,22 @@ resource "google_compute_disk_resource_policy_attachment" "disk_policy_attachmen
 
 # Firewall
 
+resource "google_compute_firewall" "allow_ssh" {
+  name    = local.firewall_ssh_name
+  project = var.gcloud_project_id
+  network = "default"
+  direction = "INGRESS"
+  priority  = 1000
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+  source_ranges = ["35.235.240.0/20"]
+  target_tags   = [local.instance_vscode_name]
+}
+
 resource "google_compute_firewall" "allow_lb_hc" {
-  name    = local.firewall_vscode_name
+  name    = local.firewall_lb_name
   project = var.gcloud_project_id
   network = "default"
   direction = "INGRESS"

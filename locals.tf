@@ -10,7 +10,8 @@ locals {
 
   # Network
 
-  firewall_vscode_name = "${var.project_name}-firewall-main"
+  firewall_lb_name = "${var.project_name}-firewall-lb"
+  firewall_ssh_name = "${var.project_name}-firewall-ssh"
   healthcheck_443_name = "${var.project_name}-healthcheck-https"
   backend_vscode_name = "${var.project_name}-backend-main" 
   cloudarmor_vscode_name = "${var.project_name}-cloudarmor-main"
