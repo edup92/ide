@@ -41,7 +41,7 @@ chmod +x gcloud-vscode-googlesso/runnme.sh ; gcloud-vscode-googlesso/runnme.sh
 
 ### 5) Point the ip to the record in your DNS zone
 
-### 6) Save SSHKeypair and Ouath Key and secret from Gcloud secrets
+### 6) Save PEM SSH and PEM Github and OAuth Key and secret from Gcloud secrets
 
 ### View status
 ```bash
