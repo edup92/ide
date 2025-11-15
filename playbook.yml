@@ -245,12 +245,7 @@
               WORKDIR /home/coder
 
               # 7. Puerto y ejecución
-              ENTRYPOINT [
-                "code-server",
-                "--bind-addr", "0.0.0.0:8443",
-                "--auth", "none",
-                "/home/coder/workspace"
-              ]
+              ENTRYPOINT ["code-server", "--bind-addr", "0.0.0.0:8443", "--auth", "none", "/home/coder/workspace"]
         - name: Create entrypoint.sh
           copy:
             dest: /opt/code-server/docker/entrypoint.sh
