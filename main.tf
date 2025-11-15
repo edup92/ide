@@ -83,7 +83,23 @@ resource "google_compute_instance" "instance_vscode" {
 
 # Playbook
 
-
+resource "null_resource" "run_ansible" {
+  depends_on = [google_compute_instance.instance_vscode]
+  triggers = {
+    playbook_hash = filesha256("${path.module}/playbook.yml")
+  }
+  provisioner "local-exec" {
+    command = <<EOT
+      ansible-playbook \
+        -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
+        --user ubuntu \
+        --private-key "${local_file.file_keypair.filename}" \
+        --extra-vars "@${path.module}/vars.json" \
+        --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+        playbook.yml
+    EOT
+  }
+}
 
 # Snapshot
 
@@ -115,8 +131,8 @@ resource "google_compute_disk_resource_policy_attachment" "disk_policy_attachmen
 
 # Firewall
 
-resource "google_compute_firewall" "allow_ssh" {
-  name    = local.firewall_ssh_name
+resource "google_compute_firewall" "fw_localssh" {
+  name    = local.firewall_localssh_name
   project = var.gcloud_project_id
   network = "default"
   direction = "INGRESS"
@@ -129,7 +145,7 @@ resource "google_compute_firewall" "allow_ssh" {
   target_tags   = [local.instance_vscode_name]
 }
 
-resource "google_compute_firewall" "allow_lb_hc" {
+resource "google_compute_firewall" "fw_lb" {
   name    = local.firewall_lb_name
   project = var.gcloud_project_id
   network = "default"
@@ -142,6 +158,22 @@ resource "google_compute_firewall" "allow_lb_hc" {
   source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
   target_tags   = [local.instance_vscode_name]
 }
+
+resource "google_compute_firewall" "allow_temp_ssh" {
+  name    = local.firewall_tempssh_name
+  project = var.gcloud_project_id
+  network = "default"
+  direction = "INGRESS"
+  priority  = 1000
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = [local.instance_vscode_name]
+  disabled = true
+}
+
 
 # Cloud armor
 
