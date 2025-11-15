@@ -203,7 +203,8 @@
                     ca-certificates \
                     software-properties-common \
                     openssh-client \
-                    sudo && \
+                    sudo \
+                    unzip && \
                   rm -rf /var/lib/apt/lists/*
 
               # 2. Python
@@ -236,15 +237,15 @@
                     -o /usr/local/bin/terragrunt && \
                   chmod +x /usr/local/bin/terragrunt
 
-              # 5. Ansible
+              # 6. Ansible
               RUN add-apt-repository --yes --update ppa:ansible/ansible && \
                   apt-get install -y --no-install-recommends ansible && \
                   rm -rf /var/lib/apt/lists/*
 
-              # 6. Instalar code-server
+              # 7. Instalar code-server
               RUN curl -fsSL https://code-server.dev/install.sh | bash
 
-              # 7. Crear usuario coder
+              # 8. Crear usuario coder
               RUN useradd -m coder && \
                   echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-coder
 
@@ -252,44 +253,37 @@
               ARG GID={{ code_user.group }}
               RUN groupmod -g $GID coder && usermod -u $UID -g $GID coder
 
-              # 8. Crear directorios
+              # 9. Crear directorios
               RUN mkdir -p /home/coder/.ssh && \
                   mkdir -p /home/coder/.local/share/code-server && \
-                  mkdir -p /home/coder/workspace && \
                   mkdir -p /home/coder/.config/code-server && \
+                  mkdir -p /home/coder/workspace && \
                   chown -R coder:coder /home/coder
 
-              # 9. Config SSH
-
+              # 10. Crear .gitmessage.txt en /home/coder
               RUN echo "Short, descriptive title (max 50 chars)" \
-                > /home/coder/.gitmessage.txt && \
-              chown coder:coder /home/coder/.gitmessage.txt
+                    > /home/coder/.gitmessage.txt && \
+                  chown coder:coder /home/coder/.gitmessage.txt
 
+              # 11. Configuración SSH (sin claves)
               RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_rsa\n  StrictHostKeyChecking no" \
                   > /home/coder/.ssh/config && \
                   chown coder:coder /home/coder/.ssh/config && \
                   chmod 600 /home/coder/.ssh/config
 
+              # 12. Git global config
               RUN git config --global user.name "code-server" && \
                   git config --global user.email "{{ admin_email }}" && \
-                  git config --global commit.template /workspaces/vscode/.devcontainer/.gitmessage.txt
+                  git config --global commit.template /home/coder/.gitmessage.txt
 
-              # 10. Install Code
+              # 13. Cambiar a usuario coder
               USER coder
               ENV HOME=/home/coder
-              ENV PATH="/usr/bin:${PATH}"
 
-              RUN code-server --install-extension github.copilot && \
-                  code-server --install-extension hashicorp.terraform && \
-                  code-server --install-extension redhat.ansible && \
-                  code-server --install-extension ms-python.python && \
-                  code-server --install-extension enkia.tokyo-night && \
-                  code-server --install-extension esbenp.prettier-vscode
-
-              # 11. WORKDIR
+              # 14. WORKDIR
               WORKDIR /home/coder/workspace
 
-              # 12. Entrypoint
+              # 15. Entrypoint
               COPY entrypoint.sh /usr/local/bin/entrypoint.sh
               ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
         - name: Create entrypoint.sh
@@ -306,6 +300,17 @@
                   cp /opt/code-server/config/github_pem /home/coder/.ssh/id_rsa
                   chmod 600 /home/coder/.ssh/id_rsa
                   chown coder:coder /home/coder/.ssh/id_rsa
+              fi
+
+              EXT_DIR="/home/coder/.local/share/code-server/extensions"
+              if [ ! -d "$EXT_DIR" ] || [ -z "$(ls -A $EXT_DIR)" ]; then
+                  echo "Installing VSCode extensions..."
+                  code-server --install-extension github.copilot
+                  code-server --install-extension hashicorp.terraform
+                  code-server --install-extension redhat.ansible
+                  code-server --install-extension ms-python.python
+                  code-server --install-extension enkia.tokyo-night
+                  code-server --install-extension esbenp.prettier-vscode
               fi
 
               # Lanzar code-server en workspace
