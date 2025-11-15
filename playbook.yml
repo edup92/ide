@@ -137,6 +137,12 @@
                 "git.postCommitCommand": "sync",
                 "ansible.python.interpreterPath": "/usr/bin/python3",
                 "ansible.validation.lint.enabled": true,
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "security.workspace.trust.enabled": true,
+                "security.workspace.trust.untrustedFolders": [],
+                "security.workspace.trust.allowedFolders": [
+                  "/home/coder/workspace"
+                ],
                 "extensions": [
                   "github.copilot",
                   "hashicorp.terraform",
