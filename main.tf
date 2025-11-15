@@ -17,7 +17,7 @@ resource "local_file" "file_pem_ssh" {
 }
 
 resource "google_secret_manager_secret" "secret_pem_ssh" {
-  secret_id = local.sshkey_main_name
+  secret_id = local.secret_pem_ssh
   replication {
     automatic = true
   }
@@ -290,8 +290,8 @@ resource "null_resource" "run_ansible" {
   }
   provisioner "local-exec" {
     environment = {
-      GITHUB_PEM_PRIVATE = tls_private_key.github_pem.private_key_pem
-      GITHUB_PEM_PUBLIC  = tls_private_key.github_pem.public_key_openssh
+      PEM_GITHUB_PRIVATE = tls_private_key.pem_github.private_key_pem
+      PEM_GITHUB_PUBLIC  = tls_private_key.pem_github.public_key_openssh
     }
     command = <<EOT
   # Abrir SSH temporalmente
@@ -304,8 +304,8 @@ resource "null_resource" "run_ansible" {
     -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
     --user ubuntu \
     --private-key "${local_file.file_pem_ssh.filename}" \
-    --extra-vars "github_private_key='$GITHUB_PEM_PRIVATE'" \
-    --extra-vars "github_public_key='$GITHUB_PEM_PUBLIC'" \
+    --extra-vars "github_private_key='$PEM_GITHUB_PRIVATE'" \
+    --extra-vars "github_public_key='$PEM_GITHUB_PUBLIC'" \
     --extra-vars "@${path.module}/vars.json" \
     --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
     playbook.yml
