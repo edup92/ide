@@ -95,7 +95,7 @@ resource "null_resource" "run_ansible" {
         --user ubuntu \
         --private-key "${local_file.file_keypair.filename}" \
         --extra-vars "@${path.module}/vars.json" \
-        -o StrictHostKeyChecking=no \
+        --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
         playbook.yml
     EOT
   }
