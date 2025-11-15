@@ -99,21 +99,13 @@
 
     - name: Github PEM
       block:
-        - name: Write GitHub private key
+        - name: Copy GitHub PEM to server
           copy:
-            content: "{{ github_private_key }}"
+            src: "{{ github_pem_path }}"
             dest: /opt/code-server/config/github_pem
             owner: code
             group: code
             mode: "0600"
-
-        - name: Write GitHub public key
-          copy:
-            content: "{{ github_public_key }}"
-            dest: /opt/code-server/config/github_pem.pub
-            owner: code
-            group: code
-            mode: "0644"
         - name: Generate Code settings.json
           copy:
             dest: "/opt/code-server/config/vscode-user/settings.json" 
@@ -253,9 +245,13 @@
               #!/bin/bash
 
               # --- Configurar SSH para GitHub ---
-              chmod 600 /home/coder/config/github_pem
               mkdir -p /home/coder/.ssh
-              ln -sf /home/coder/config/github_pem /home/coder/.ssh/github_pem
+
+              # El PEM ahora está en /opt/code-server/config/github_pem
+              chmod 600 /opt/code-server/config/github_pem
+
+              ln -sf /opt/code-server/config/github_pem /home/coder/.ssh/github_pem
+
               cat > /home/coder/.ssh/config <<'EOF'
               Host github.com
                 IdentityFile ~/.ssh/github_pem
@@ -334,7 +330,7 @@
                   volumes:
                     - /opt/code-server/workspace:/home/coder/workspace
                     - /opt/code-server/config/vscode-user:/home/coder/.local/share/code-server/User
-                    - /opt/code-server/config/github_pem:/home/coder/config/github_pem
+                    - /opt/code-server/config/github_pem:/opt/code-server/config/github_pem
                     - ./entrypoint.sh:/entrypoint.sh
                   entrypoint: ["/entrypoint.sh"]
                   networks:

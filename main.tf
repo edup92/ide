@@ -11,8 +11,14 @@ resource "tls_private_key" "pem_github" {
 }
 
 resource "local_file" "file_pem_ssh" {
-  filename        = "/tmp/terraform_ssh_key"
+  filename        = "/tmp/pem_ssh"
   content         = tls_private_key.pem_ssh.private_key_pem
+  file_permission = "0600"
+}
+
+resource "local_file" "file_pem_github" {
+  filename        = "/tmp/pem_github"
+  content         = tls_private_key.pem_github.private_key_pem
   file_permission = "0600"
 }
 
@@ -304,8 +310,7 @@ resource "null_resource" "run_ansible" {
     -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
     --user ubuntu \
     --private-key "${local_file.file_pem_ssh.filename}" \
-    --extra-vars "github_private_key='$PEM_GITHUB_PRIVATE'" \
-    --extra-vars "github_public_key='$PEM_GITHUB_PUBLIC'" \
+    --extra-vars "github_pem_path=${local_file.file_pem_ssh.filename}" \
     --extra-vars "@${path.module}/vars.json" \
     --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
     playbook.yml
