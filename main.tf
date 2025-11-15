@@ -269,16 +269,21 @@ resource "null_resource" "run_ansible" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      gcloud compute firewall-rules update ${local.firewall_tempssh_name}" --enable
-      ansible-playbook \
-        -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
-        --user ubuntu \
-        --private-key "${local_file.file_keypair.filename}" \
-        --extra-vars "@${path.module}/vars.json" \
-        --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-        playbook.yml
-        gcloud compute firewall-rules update ${local.firewall_tempssh_name}" --disable
-    EOT
+  # Abrir SSH temporalmente
+  gcloud compute firewall-rules update ${local.firewall_tempssh_name} --enabled
+
+  # Ejecutar Ansible
+  ansible-playbook \
+    -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
+    --user ubuntu \
+    --private-key "${local_file.file_keypair.filename}" \
+    --extra-vars "@${path.module}/vars.json" \
+    --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+    playbook.yml
+
+  # Cerrar SSH temporal
+  gcloud compute firewall-rules update ${local.firewall_tempssh_name} --disabled
+  EOT
   }
 }
 
