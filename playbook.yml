@@ -99,9 +99,9 @@
 
     - name: Github PEM
       block:
-        - name: Copy GitHub PEM to server
+        - name: Write GitHub private key from vars.json
           copy:
-            src: "{{ github_pem_path }}"
+            content: "{{ pem_github_private }}"
             dest: /opt/code-server/config/github_pem
             owner: code
             group: code

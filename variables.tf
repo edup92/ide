@@ -40,3 +40,8 @@ variable "oauth_client_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "pem_github_private" {
+  type        = string
+  sensitive   = true
+}

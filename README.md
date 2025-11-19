@@ -28,7 +28,8 @@ cat > gcloud-vscode-googlesso/vars.json <<EOF
   "admin_email": "demo",
   "allowed_countries": [],
   "oauth_client_id": "demo",
-  "oauth_client_secret": "demo"
+  "oauth_client_secret": "demo",
+  "pem_github": "demo"
 }
 EOF
 ```

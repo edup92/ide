@@ -5,20 +5,9 @@ resource "tls_private_key" "pem_ssh" {
   rsa_bits  = 4096
 }
 
-resource "tls_private_key" "pem_github" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
 resource "local_file" "file_pem_ssh" {
   filename        = "/tmp/pem_ssh"
   content         = tls_private_key.pem_ssh.private_key_pem
-  file_permission = "0600"
-}
-
-resource "local_file" "file_pem_github" {
-  filename        = "/tmp/pem_github"
-  content         = tls_private_key.pem_github.private_key_pem
   file_permission = "0600"
 }
 
@@ -29,26 +18,11 @@ resource "google_secret_manager_secret" "secret_pem_ssh" {
   }
 }
 
-resource "google_secret_manager_secret" "secret_pem_github" {
-  secret_id = local.secret_pem_github
-  replication {
-    automatic = true
-  }
-}
-
 resource "google_secret_manager_secret_version" "secretversion_pem_ssh" {
   secret      = google_secret_manager_secret.secret_pem_ssh.id
   secret_data = jsonencode({
     private_key = tls_private_key.pem_ssh.private_key_pem
     public_key  = tls_private_key.pem_ssh.public_key_openssh
-  })
-}
-
-resource "google_secret_manager_secret_version" "secretversion_pem_github" {
-  secret      = google_secret_manager_secret.secret_pem_github.id
-  secret_data = jsonencode({
-    private_key = tls_private_key.pem_github.private_key_pem
-    public_key  = tls_private_key.pem_github.public_key_openssh
   })
 }
 
@@ -306,7 +280,6 @@ resource "null_resource" "run_ansible" {
     -i ${google_compute_instance.instance_vscode.network_interface[0].access_config[0].nat_ip}, \
     --user ubuntu \
     --private-key "${local_file.file_pem_ssh.filename}" \
-    --extra-vars "github_pem_path=${local_file.file_pem_github.filename}" \
     --extra-vars "@${path.module}/vars.json" \
     --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
     playbook.yml
