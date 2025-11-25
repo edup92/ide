@@ -53,14 +53,14 @@
       block:
         - name: Create vscode user
           user:
-            name: code
+            name: vscode
             shell: /bin/bash
-            home: /opt/code-server
+            home: /opt/vscode
             create_home: no
             groups: docker
             append: yes
             state: present
-          register: code_user
+          register: vscode_user
         - name: Create Code directories
           file:
             path: "{{ item.path }}"
@@ -69,24 +69,23 @@
             group: code
             mode: "{{ item.mode }}"
           loop:
-            - { path: "/opt/code-server", mode: "0700" }
-            - { path: "/opt/code-server/docker", mode: "0755" }
-            - { path: "/opt/code-server/ssl", mode: "0755" }
-            - { path: "/opt/code-server/workspace", mode: "0775" }
-            - { path: "/opt/code-server/config", mode: "0755" }
-            - { path: "/opt/code-server/config/vscode-user", mode: "0775" }
-            - { path: "/opt/code-server/env", mode: "0755" }
+            - { path: "/opt/vscode", mode: "0700" }
+            - { path: "/opt/vscode/docker", mode: "0755" }
+            - { path: "/opt/vscode/ssl", mode: "0755" }
+            - { path: "/opt/vscode/workspace", mode: "0775" }
+            - { path: "/opt/vscode/config", mode: "0755" }
+            - { path: "/opt/vscode/env", mode: "0755" }
 
     - name: Generate self signed SSL
       block:
         - name: Generate self-signed SSL certificate
           command: >
             openssl req -x509 -nodes -days 365 -newkey rsa:2048
-            -keyout /opt/code-server/ssl/privkey.pem
-            -out /opt/code-server/ssl/fullchain.pem
+            -keyout /opt/vscode/ssl/privkey.pem
+            -out /opt/vscode/ssl/fullchain.pem
             -subj "/C=ES/ST=Madrid/L=Madrid/O=Code/CN={{ domain }}"
           args:
-            creates: "/opt/code-server/ssl/fullchain.pem"
+            creates: "/opt/vscode/ssl/fullchain.pem"
         - name: Set SSL files permissions
           file:
             path: "{{ item }}"
@@ -94,21 +93,21 @@
             group: code
             mode: "0644"
           loop:
-            - /opt/code-server/ssl/privkey.pem
-            - /opt/code-server/ssl/fullchain.pem
+            - /opt/vscode/ssl/privkey.pem
+            - /opt/vscode/ssl/fullchain.pem
 
     - name: Github PEM
       block:
         - name: Copy GitHub private key from local file
           copy:
             src: pem_github_private
-            dest: /opt/code-server/config/github_pem
+            dest: /opt/vscode/config/github_pem
             owner: code
             group: code
             mode: "0600"
         - name: Generate Code settings.json
           copy:
-            dest: "/opt/code-server/config/vscode-user/settings.json" 
+            dest: "/opt/vscode/config/settings.json" 
             content: |
               {
                 "editor.tabSize": 2,
@@ -154,7 +153,7 @@
       block:
         - name: Ensure cookie secret file exists
           copy:
-            dest: /opt/code-server/docker/oauth_cookie_secret.txt
+            dest: /opt/vscode/docker/oauth_cookie_secret.txt
             content: "{{ lookup('pipe', 'openssl rand -base64 48 | tr -dc A-Za-z0-9 | head -c 32') }}"
             owner: code
             group: code
@@ -162,21 +161,21 @@
             force: no
         - name: Read cookie secret from remote file
           slurp:
-            src: /opt/code-server/docker/oauth_cookie_secret.txt
+            src: /opt/vscode/docker/oauth_cookie_secret.txt
           register: cookie_secret_raw
         - name: Set fact for cookie secret
           set_fact:
             oauth_cookie_secret: "{{ cookie_secret_raw.content | b64decode }}"    
         - name: Generate oauth proxy allowed accounts
           copy:
-            dest: "/opt/code-server/docker/oauth_allowed_emails.txt"
+            dest: "/opt/vscode/docker/oauth_allowed_emails.txt"
             content: "{{ admin_email }}"
             owner: code
             group: code
             mode: "0644"
-        - name: Crear Dockerfile para code-server personalizado
+        - name: Crear Dockerfile para vscode personalizado
           copy:
-            dest: /opt/code-server/docker/Dockerfile
+            dest: /opt/vscode/docker/Dockerfile
             owner: code
             group: code
             mode: "0644"
@@ -239,57 +238,57 @@
               # 7. Instalar code-server
               RUN curl -fsSL https://code-server.dev/install.sh | bash
 
-              # 8. Crear usuario coder
-              RUN useradd -m coder && \
-                  echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-coder
+              # 8. Crear usuario vscode
+              RUN useradd -m vscode && \
+                  echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-vscode
 
               ARG UID={{ code_user.uid }}
               ARG GID={{ code_user.group }}
-              RUN groupmod -g $GID coder && usermod -u $UID -g $GID coder
+              RUN groupmod -g $GID vscode && usermod -u $UID -g $GID vscode
 
               # 9. Crear directorios
-              RUN mkdir -p /home/coder/.ssh && \
-                  mkdir -p /home/coder/.local/share/code-server && \
-                  mkdir -p /home/coder/.config/code-server && \
-                  mkdir -p /home/coder/workspace && \
-                  mkdir -p /home/coder/.codex && \
-                  chown -R coder:coder /home/coder
+              RUN mkdir -p /home/vscode/.ssh && \
+                  mkdir -p /home/vscode/.local/share/code-server && \
+                  mkdir -p /home/vscode/.config/code-server && \
+                  mkdir -p /home/vscode/workspace && \
+                  mkdir -p /home/vscode/.codex && \
+                  chown -R vscode:vscode /home/vscode
 
-              # 10. Crear .gitmessage.txt en /home/coder
+              # 10. Crear .gitmessage.txt en /home/vscode
               RUN echo "Short, descriptive title (max 50 chars)" \
-                    > /home/coder/.gitmessage.txt && \
-                  chown coder:coder /home/coder/.gitmessage.txt
+                    > /home/vscode/.gitmessage.txt && \
+                  chown vscode:vscode /home/vscode/.gitmessage.txt
 
               # 11. Configuración SSH (sin claves)
               RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_rsa\n  StrictHostKeyChecking no" \
-                  > /home/coder/.ssh/config && \
-                  chown coder:coder /home/coder/.ssh/config && \
-                  chmod 600 /home/coder/.ssh/config
+                  > /home/vscode/.ssh/config && \
+                  chown vscode:vscode /home/vscode/.ssh/config && \
+                  chmod 600 /home/vscode/.ssh/config
 
-              # 12. Cambiar a usuario coder
-              USER coder
-              ENV HOME=/home/coder
+              # 12. Cambiar a usuario vscode
+              USER vscode
+              ENV HOME=/home/vscode
 
               # Codex config
-              RUN mkdir -p /home/coder/.codex && \
-                  echo 'model = "gpt-5.1"' > /home/coder/.codex/config.toml && \
-                  chmod 600 /home/coder/.codex/config.toml && \
-                  chown -R coder:coder /home/coder/.codex
+              RUN mkdir -p /home/vscode/.codex && \
+                  echo 'model = "gpt-5.1"' > /home/vscode/.codex/config.toml && \
+                  chmod 600 /home/vscode/.codex/config.toml && \
+                  chown -R vscode:vscode /home/vscode/.codex
 
               # 13. Git global config
               RUN git config --global user.name "code-server" && \
                   git config --global user.email "{{ admin_email }}" && \
-                  git config --global commit.template /home/coder/.gitmessage.txt
+                  git config --global commit.template /home/vscode/.gitmessage.txt
 
               # 14. WORKDIR
-              WORKDIR /home/coder/workspace
+              WORKDIR /home/vscode/workspace
 
               # 15. Entrypoint
               COPY entrypoint.sh /usr/local/bin/entrypoint.sh
               ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
         - name: Create entrypoint.sh
           copy:
-            dest: /opt/code-server/docker/entrypoint.sh
+            dest: /opt/vscode/docker/entrypoint.sh
             owner: code
             group: code
             mode: "0755"
@@ -319,7 +318,7 @@
               exec code-server --bind-addr 0.0.0.0:8443 --auth none
         - name: Generate OAuth Proxy env
           copy:
-            dest: "/opt/code-server/env/oauth-proxy.env"
+            dest: "/opt/vscode/env/oauth-proxy.env"
             content: |
               OAUTH2_PROXY_PROVIDER=google
               OAUTH2_PROXY_CLIENT_ID={{ oauth_client_id }}
@@ -343,7 +342,7 @@
             mode: "0600"
         - name: Generate docker-compose.yml
           copy:
-            dest: "/opt/code-server/docker/docker-compose.yml"
+            dest: "/opt/vscode/docker/docker-compose.yml"
             content: |
               networks:
 
@@ -356,12 +355,12 @@
                   build:
                     context: .
                     dockerfile: Dockerfile
-                  container_name: code-server
-                  user: "{{ code_user.uid }}:{{ code_user.group }}"
+                  container_name: vscode
+                  user: "{{ vscode_user.uid }}:{{ vscode_user.group }}"
                   volumes:
-                    - /opt/code-server/workspace:/home/coder/workspace
-                    - /opt/code-server/config/vscode-user:/home/coder/.local/share/code-server/User
-                    - /opt/code-server/config/github_pem:/home/coder/.ssh/id_rsa
+                    - /opt/vscode/workspace:/home/coder/workspace
+                    - /opt/vscode/config/settings.json:/home/coder/.local/share/vscode/User
+                    - /opt/vscode/config/github_pem:/home/coder/.ssh/id_rsa
                     - ./entrypoint.sh:/entrypoint.sh
                   entrypoint: ["/entrypoint.sh"]
                   networks:
@@ -372,22 +371,22 @@
                   image: quay.io/oauth2-proxy/oauth2-proxy:latest
                   container_name: code-oauth2-proxy
                   restart: always
-                  user: "{{ code_user.uid }}:{{ code_user.group }}"
+                  user: "{{ vscode_user.uid }}:{{ vscode_user.group }}"
                   ports:
                     - "443:443"
                   networks:
                     - code-net
                   volumes:
-                    - ./oauth_allowed_emails.txt:/etc/oauth2_proxy/allowed_emails.txt:ro
-                    - ../ssl:/ssl
+                    - /opt/vscode/docker/oauth_allowed_emails.txt:/etc/oauth2_proxy/allowed_emails.txt:ro
+                    - /opt/vscode/ssl:/ssl
                   env_file:
-                    - ../env/oauth-proxy.env
+                    - /opt/vscode/env/oauth-proxy.env
             owner: code
             group: code
             mode: "0644"
         - name: Create systemd service for Code
           copy:
-            dest: "/etc/systemd/system/code-server.service"
+            dest: "/etc/systemd/system/vscode.service"
             content: |
               [Unit]
               Description=Code Docker Compose
@@ -397,7 +396,7 @@
               [Service]
               Type=oneshot
               RemainAfterExit=yes
-              WorkingDirectory=/opt/code-server/docker
+              WorkingDirectory=/opt/vscode/docker
               # Debug solo para build + launch
               Environment=COMPOSE_DOCKER_CLI_BUILD=1
               Environment=DOCKER_BUILDKIT=1
@@ -413,7 +412,7 @@
             mode: "0644"
         - name: Enable and start Code service
           systemd:
-            name: code-server
+            name: vscode
             enabled: true
             state: restarted
             daemon_reload: true
