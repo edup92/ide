@@ -144,8 +144,7 @@
                   "/home/coder/workspace"
                 ],
                 "chat.disableAIFeatures": true,
-                "chatgpt.openOnStartup": true,
-                "openai.chatgpt.defaultModel": "gpt-5.1"
+                "chatgpt.openOnStartup": true
               }
             owner: code
             group: code
@@ -253,6 +252,7 @@
                   mkdir -p /home/coder/.local/share/code-server && \
                   mkdir -p /home/coder/.config/code-server && \
                   mkdir -p /home/coder/workspace && \
+                  mkdir -p /home/coder/.codex && \
                   chown -R coder:coder /home/coder
 
               # 10. Crear .gitmessage.txt en /home/coder
@@ -269,6 +269,12 @@
               # 12. Cambiar a usuario coder
               USER coder
               ENV HOME=/home/coder
+
+              # Codex config
+              RUN mkdir -p /home/coder/.codex && \
+                  echo 'model = "gpt-5.1"' > /home/coder/.codex/config.toml && \
+                  chmod 600 /home/coder/.codex/config.toml && \
+                  chown -R coder:coder /home/coder/.codex
 
               # 13. Git global config
               RUN git config --global user.name "code-server" && \
