@@ -143,14 +143,9 @@
                 "security.workspace.trust.allowedFolders": [
                   "/home/coder/workspace"
                 ],
-                "extensions": [
-                  "github.copilot",
-                  "hashicorp.terraform",
-                  "redhat.ansible",
-                  "ms-python.python",
-                  "enkia.tokyo-night",
-                  "esbenp.prettier-vscode"
-                ]
+                "chat.disableAIFeatures": true,
+                "chatgpt.openOnStartup": false,
+                "chatgpt.model": "gpt-5"
               }
             owner: code
             group: code
@@ -311,6 +306,7 @@
                   code-server --install-extension ms-python.python
                   code-server --install-extension enkia.tokyo-night
                   code-server --install-extension esbenp.prettier-vscode
+                  code-server --install-extension openai.chatgpt
               fi
 
               # Lanzar code-server en workspace
