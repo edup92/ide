@@ -144,8 +144,8 @@
                   "/home/coder/workspace"
                 ],
                 "chat.disableAIFeatures": true,
-                "chatgpt.openOnStartup": false,
-                "chatgpt.model": "gpt-5"
+                "chatgpt.openOnStartup": true,
+                "chatgpt.model": "gpt-5.1",
               }
             owner: code
             group: code
