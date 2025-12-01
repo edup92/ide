@@ -155,7 +155,6 @@ resource "google_compute_firewall" "allow_temp_ssh" {
 
 # Playbook
 
-
 resource "null_resource" "run_ansible" {
   depends_on = [
     google_compute_instance.instance_main,
@@ -213,5 +212,64 @@ resource "null_resource" "run_ansible" {
     --project=${var.gcloud_project_id} \
     --disabled
   EOT
+  }
+}
+
+# Cloudflare
+
+data "cloudflare_zone" "zone_main" {
+  name = var.dns_domain
+}
+
+resource "cloudflare_record" "dnsrecord_main" {
+  zone_id = cloudflare_zone.zone_main.id
+  name    = var.dns_record
+  type    = "A"
+  value   = google_compute_instance.instance_main.network_interface[0].access_config[0].nat_ip
+  ttl     = 1
+  proxied = true
+  allow_overwrite = true
+}
+
+resource "cloudflare_zone_settings_override" "zonesettings_main" {
+  zone_id = cloudflare_zone.zone_main.id
+  settings {
+    ssl                     = "full"
+    min_tls_version         = "1.2"
+    automatic_https_rewrites = "on"
+    always_use_https        = "on"
+  }
+}
+
+resource "cloudflare_ruleset" "ruleset_cache" {
+  zone_id = cloudflare_zone.zone_main.id
+  name    = "disable_cache_everything"
+  kind    = "zone"
+  phase   = "http_request_cache_settings"
+  rules {
+    enabled     = true
+    description = "Soft disable cache (Terraform-safe)"
+    expression  = "true"
+    action = "set_cache_settings"
+    action_parameters {
+      cache = false
+    }
+  }
+}
+
+resource "cloudflare_ruleset" "ruleset_waf" {
+  zone_id = cloudflare_zone.zone_main.id
+  name    = "country-access-control"
+  kind    = "zone"
+  phase   = "http_request_firewall_custom"
+
+  rules {
+    enabled     = true
+    description = "Block all non-allowed countries"
+    expression  = "not (${join(" or ", [
+      for c in var.allowed_countries :
+      "(ip.geoip.country eq \"${c}\")"
+    ])})"
+    action      = "block"
   }
 }
