@@ -208,7 +208,6 @@ resource "cloudflare_zone_settings_override" "zonesettings_main" {
 resource "cloudflare_ruleset" "ruleset_cache" {
   zone_id = data.cloudflare_zone.zone_main.id
   name    = "disable_cache_everything"
-  kind    = "zone"
   phase   = "http_request_cache_settings"
   rules {
     enabled     = true
@@ -224,9 +223,7 @@ resource "cloudflare_ruleset" "ruleset_cache" {
 resource "cloudflare_ruleset" "ruleset_waf" {
   zone_id = data.cloudflare_zone.zone_main.id
   name    = "country-access-control"
-  kind    = "zone"
   phase   = "http_request_firewall_custom"
-
   rules {
     enabled     = true
     description = "Block all non-allowed countries"
