@@ -19,7 +19,7 @@ for i in {1..14}; do
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
       -i "$INSTANCE_SSH_KEY" \
-      $INSTANCE_USER@"$IP" 'exit' >/dev/null 2>&1 && {
+      $INSTANCE_USER@"$INSTANCE_IP" 'exit' >/dev/null 2>&1 && {
         echo "SSH available."
         OK=1
         break
@@ -45,7 +45,7 @@ if ssh -o BatchMode=yes \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
       -i "$INSTANCE_SSH_KEY" \
-      $INSTANCE_USER@"$IP" \
+      $INSTANCE_USER@"$INSTANCE_IP" \
       "test -f /.installed"; then
 
     echo "Playbook already installed. Exiting."
@@ -54,7 +54,7 @@ fi
 
 # Ejecutar Ansible
 ansible-playbook \
-  -i "$IP," \
+  -i "$INSTANCE_IP," \
   --user $INSTANCE_USER \
   --private-key "$INSTANCE_SSH_KEY" \
   --extra-vars "@$VARS_FILE" \
@@ -70,7 +70,7 @@ ssh -o BatchMode=yes \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
     -i "$INSTANCE_SSH_KEY" \
-    $INSTANCE_USER@"$IP" \
+    $INSTANCE_USER@"$INSTANCE_IP" \
     "sudo touch /.installed"
 
 # Restaurar SG principal
