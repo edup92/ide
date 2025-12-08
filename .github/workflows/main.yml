@@ -32,12 +32,6 @@ jobs:
             (.project_name        | type=="string") and
             (.dns_record          | type=="string") and
             (.admin_email         | type=="string") and
-            (.admin_pass          | type=="string") and
-            (.smtp_host           | type=="string") and
-            (.smtp_security       | type=="string") and
-            (.smtp_username       | type=="string") and
-            (.smtp_password       | type=="string") and
-            (.smtp_port           | type=="number") and
             (.pem_github          | type=="string")
           ' <<<"$VARS" >/dev/null || { echo "Error: VARS_JSON schema invalid"; exit 1; }
           echo "VARS_JSON schema valid"

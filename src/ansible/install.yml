@@ -135,13 +135,103 @@
 
     - name: Create docker config files
       block:
+        - name: Generate dockerfile
+          copy:
+            dest: "/opt/vscode/docker/Dockerfile"
+            content: |-
+              FROM mcr.microsoft.com/vscode/server:stable
+
+              USER root
+
+              # Base tools
+              RUN apt-get update && apt-get install -y \
+                  git \
+                  unzip \
+                  nano \
+                  wget \
+                  curl \
+                  jq \
+                  software-properties-common \
+                  gnupg \
+                && apt-get clean \
+                && rm -rf /var/lib/apt/lists/*
+
+              # Python
+              RUN apt-get update && apt-get install -y \
+                  python3 \
+                  python3-pip \
+                  python3-venv \
+                && apt-get clean \
+                && rm -rf /var/lib/apt/lists/*
+
+              # Ansible
+              RUN add-apt-repository --yes --update ppa:ansible/ansible \
+                && apt-get update \
+                && apt-get install -y ansible \
+                && apt-get clean \
+                && rm -rf /var/lib/apt/lists/*
+
+              # Node.js LTS
+              RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+                && apt-get install -y nodejs \
+                && apt-get clean \
+                && rm -rf /var/lib/apt/lists/*
+
+              # Terraform
+              RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg \
+                && echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+                  > /etc/apt/sources.list.d/hashicorp.list \
+                && apt-get update \
+                && apt-get install -y terraform \
+                && apt-get clean \
+                && rm -rf /var/lib/apt/lists/*
+
+              # Terragrunt
+              RUN wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.93.8/terragrunt_linux_amd64 \
+                && install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt \
+                && rm terragrunt_linux_amd64
+
+              # AWS CLI v2
+              RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+                && unzip awscliv2.zip \
+                && ./aws/install \
+                && rm -rf aws awscliv2.zip
+
+              # Prepare SSH directory and known_hosts
+              RUN mkdir -p /home/vscode/.ssh \
+                && chmod 700 /home/vscode/.ssh \
+                && touch /home/vscode/.ssh/known_hosts \
+                && ssh-keyscan github.com >> /home/vscode/.ssh/known_hosts \
+                && chown -R vscode:vscode /home/vscode/.ssh
+
+              # SSH config file to force usage of our mounted key
+              RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes" \
+                > /home/vscode/.ssh/config \
+                && chmod 600 /home/vscode/.ssh/config \
+                && chown vscode:vscode /home/vscode/.ssh/config
+
+              # GIT COMMIT MESSAGE TEMPLATE
+
+              RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here what changed and why.\n# Use bullets if needed:\n# - Change 1\n# - Change 2\n" \
+                > /home/vscode/.gitmessage \
+                && chown vscode:vscode /home/vscode/.gitmessage
+
+              RUN git config --system commit.template /home/vscode/.gitmessage
+
+              # Return to vscode user
+              USER vscode
+            owner: vscode
+            group: vscode
+            mode: "0644"
         - name: Generate docker-compose.yml
           copy:
             dest: "/opt/vscode/docker/docker-compose.yml"
             content: |-
               services:
                 vscode:
-                  image: mcr.microsoft.com/vscode/server:stable
+                  build:
+                    context: .
+                    dockerfile: Dockerfile
                   container_name: vscode
                   restart: always
                   ports:
@@ -150,6 +240,7 @@
                     - ../data:/workspace
                     - ../extensions:/home/vscode/.vscode-server/extensions
                     - ../userdata:/home/vscode/.vscode-server/data/User
+                    - ../pem/github_pem:/home/vscode/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
             mode: "0644"
@@ -165,7 +256,11 @@
               [Service]
               Type=oneshot
               RemainAfterExit=yes
+              # Rebuild + Up
+              ExecStart=/usr/bin/docker compose -f /opt/vscode/docker/docker-compose.yml build
               ExecStart=/usr/bin/docker compose -f /opt/vscode/docker/docker-compose.yml up -d
+
+              # Down cuando paras el servicio
               ExecStop=/usr/bin/docker compose -f /opt/vscode/docker/docker-compose.yml down
               TimeoutStartSec=0
 
