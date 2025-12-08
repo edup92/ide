@@ -41,5 +41,6 @@ locals {
     smtp_port           = var.smtp_port
     smtp_username       = var.smtp_username
     smtp_password       = var.smtp_password
+    pem_github          = var.pem_github
   })
 }

@@ -18,7 +18,13 @@ variable "dns_record" {
   description = "DNS record"
   type        = string
 }
+
 variable "admin_email" {
   description = "Administrator email address for the Bitwarden instance"
+  type        = string
+}
+
+variable "pem_github" {
+  description = "Github private pem key"
   type        = string
 }

@@ -51,3 +51,281 @@
               - docker-compose-plugin
             state: present
             update_cache: true
+
+    - name: Create vscode user and directories
+      block:
+        - name: Create vscode user
+          user:
+            name: vscode
+            shell: /bin/bash
+            home: /opt/vscode
+            create_home: no
+            groups: docker
+            append: yes
+            state: present
+          register: vscode_user
+        - name: Create Code directories
+          file:
+            path: "{{ item.path }}"
+            state: directory
+            owner: vscode
+            group: vscode
+            mode: "{{ item.mode }}"
+          loop:
+            - { path: "/opt/vscode", mode: "0700" }
+            - { path: "/opt/vscode/docker", mode: "0755" }
+            - { path: "/opt/vscode/workspace", mode: "0775" }
+            - { path: "/opt/vscode/config", mode: "0755" }
+            - { path: "/opt/vscode/env", mode: "0755" }
+
+    - name: Vscode config
+      block:
+        - name: Copy GitHub private key from local file
+          copy:
+            dest: /opt/vscode/config/github_pem
+            content: "{{ pem_github }}"
+            owner: vscode
+            group: vscode
+            mode: "0600"
+        - name: Generate Code settings.json
+          copy:
+            dest: "/opt/vscode/config/settings.json" 
+            content: |
+              {
+                "editor.tabSize": 2,
+                "editor.insertSpaces": true,
+                "editor.detectIndentation": false,
+                "editor.defaultFormatter": "esbenp.prettier-vscode",
+                "python.formatting.provider": "black",
+                "editor.formatOnSave": true,
+                "editor.minimap.enabled": false,
+                "workbench.colorTheme": "Tokyo Night",
+                "window.commandCenter": false,
+                "editor.lineNumbers": "on",
+                "editor.stickyScroll.enabled": false,
+                "files.autoSave": "onWindowChange",
+                "workbench.editorAssociations": {
+                    "*.md": "vscode.markdown.preview.editor",
+                    "*.MD": "vscode.markdown.preview.editor"
+                },
+                "workbench.sideBar.location": "left",
+                "workbench.statusBar.visible": true,
+                "workbench.tree.enableStickyScroll": true,
+                "workbench.view.alwaysShowHeaderActions": false,
+                "window.density.editorTabHeight": "default",
+                "git.autofetch": false,
+                "git.enableSmartCommit": true,
+                "git.postCommitCommand": "sync",
+                "ansible.python.interpreterPath": "/usr/bin/python3",
+                "ansible.validation.lint.enabled": true,
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "security.workspace.trust.enabled": true,
+                "security.workspace.trust.untrustedFolders": [],
+                "security.workspace.trust.allowedFolders": [
+                  "/home/coder/workspace"
+                ],
+                "chat.disableAIFeatures": true,
+                "chatgpt.openOnStartup": true
+              }
+            owner: vscode
+            group: vscode
+            mode: "0644"
+
+
+    - name: Create docker config files
+      block:
+        - name: Create Dockerfile
+          copy:
+            dest: /opt/vscode/docker/coder_dockerfile
+            owner: vscode
+            group: vscode
+            mode: "0644"
+            content: |
+              FROM ubuntu:22.04
+              ENV DEBIAN_FRONTEND=noninteractive
+
+              # 1. Dependencias base
+              RUN apt-get update && \
+                  apt-get install -y --no-install-recommends \
+                    curl \
+                    wget \
+                    git \
+                    gnupg \
+                    nano \
+                    jq \
+                    lsb-release \
+                    ca-certificates \
+                    software-properties-common \
+                    openssh-client \
+                    sudo \
+                    unzip && \
+                  rm -rf /var/lib/apt/lists/*
+
+              # 2. Python
+              RUN apt-get update && \
+                  apt-get install -y --no-install-recommends python3 python3-pip && \
+                  rm -rf /var/lib/apt/lists/*
+
+              # 3. Node.js LTS
+              RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+                  apt-get install -y nodejs && \
+                  rm -rf /var/lib/apt/lists/*
+
+              # 4. Terraform
+              RUN curl -fsSL https://apt.releases.hashicorp.com/gpg \
+                    | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
+                  echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+                    https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+                    > /etc/apt/sources.list.d/hashicorp.list && \
+                  apt-get update && \
+                  apt-get install -y terraform && \
+                  rm -rf /var/lib/apt/lists/*
+
+              # 5. Terragrunt
+              ENV TG_VERSION="v0.93.8"
+              ENV OS="linux"
+              ENV ARCH="amd64"
+              ENV TG_BIN="terragrunt_${OS}_${ARCH}"
+
+              RUN curl -sL "https://github.com/gruntwork-io/terragrunt/releases/download/${TG_VERSION}/${TG_BIN}" \
+                    -o /usr/local/bin/terragrunt && \
+                  chmod +x /usr/local/bin/terragrunt
+
+              # 6. Ansible
+              RUN add-apt-repository --yes --update ppa:ansible/ansible && \
+                  apt-get install -y --no-install-recommends ansible && \
+                  rm -rf /var/lib/apt/lists/*
+
+              # 7. Instalar code-server
+              RUN curl -fsSL https://code-server.dev/install.sh | bash
+
+              # 8. Crear usuario vscode
+              RUN useradd -m vscode && \
+                  echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-vscode
+
+              ARG UID={{ code_user.uid }}
+              ARG GID={{ code_user.group }}
+              RUN groupmod -g $GID vscode && usermod -u $UID -g $GID vscode
+
+              # 9. Crear directorios
+              RUN mkdir -p /home/vscode/.ssh && \
+                  mkdir -p /home/vscode/.local/share/code-server && \
+                  mkdir -p /home/vscode/.config/code-server && \
+                  mkdir -p /home/vscode/workspace && \
+                  mkdir -p /home/vscode/.codex && \
+                  chown -R vscode:vscode /home/vscode
+
+              # 10. Crear .gitmessage.txt en /home/vscode
+              RUN echo "Short, descriptive title (max 50 chars)" \
+                    > /home/vscode/.gitmessage.txt && \
+                  chown vscode:vscode /home/vscode/.gitmessage.txt
+
+              # 11. Configuración SSH (sin claves)
+              RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_rsa\n  StrictHostKeyChecking no" \
+                  > /home/vscode/.ssh/config && \
+                  chown vscode:vscode /home/vscode/.ssh/config && \
+                  chmod 600 /home/vscode/.ssh/config
+
+              # 12. Cambiar a usuario vscode
+              USER vscode
+              ENV HOME=/home/vscode
+
+              # Codex config
+              RUN mkdir -p /home/vscode/.codex && \
+                  echo 'model = "gpt-5.1"' > /home/vscode/.codex/config.toml && \
+                  chmod 600 /home/vscode/.codex/config.toml && \
+                  chown -R vscode:vscode /home/vscode/.codex
+
+              # 13. Git global config
+              RUN git config --global user.name "code-server" && \
+                  git config --global user.email "{{ admin_email }}" && \
+                  git config --global commit.template /home/vscode/.gitmessage.txt
+
+              # 14. WORKDIR
+              WORKDIR /home/vscode/workspace
+
+              # 15. Entrypoint
+              COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+              ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+        - name: Create entrypoint.sh
+          copy:
+            dest: /opt/vscode/docker/coder_entrypoint.sh
+            owner: vscode
+            group: vscode
+            mode: "0755"
+            content: |
+              #!/bin/bash
+
+              # Private key
+
+              chmod 600 /home/coder/.ssh/id_rsa
+              chown coder:coder /home/coder/.ssh/id_rsa
+
+              # Extensions
+
+              EXT_DIR="/home/coder/.local/share/code-server/extensions"
+              if [ ! -d "$EXT_DIR" ] || [ -z "$(ls -A $EXT_DIR)" ]; then
+                  echo "Installing VSCode extensions..."
+                  code-server --install-extension github.copilot
+                  code-server --install-extension hashicorp.terraform
+                  code-server --install-extension redhat.ansible
+                  code-server --install-extension ms-python.python
+                  code-server --install-extension enkia.tokyo-night
+                  code-server --install-extension esbenp.prettier-vscode
+                  code-server --install-extension openai.chatgpt
+              fi
+
+              # Lanzar code-server en workspace
+              exec code-server --bind-addr 0.0.0.0:8443 --auth none
+        - name: Generate docker-compose.yml
+          copy:
+            dest: "/opt/vscode/docker/docker-compose.yml"
+            content: |-
+              services:
+                vscode:
+                  build:
+                    context: .
+                    dockerfile: coder_dockerfile
+                  container_name: vscode
+                  restart: always
+                  volumes:
+                    - ../workspace:/home/coder/workspace
+                    - ../config/settings.json:/home/coder/.local/share/vscode/User
+                    - ../config/github_pem:/home/coder/.ssh/id_rsa
+                    - ./entrypoint.sh:/coder_entrypoint.sh
+                  entrypoint: ["/entrypoint.sh"]
+                  ports:
+                    - "80:80"
+            owner: vscode
+            group: vscode
+            mode: "0644"
+        - name: Create systemd service for Code
+          copy:
+            dest: "/etc/systemd/system/vscode-server.service"
+            content: |
+              [Unit]
+              Description=Code Docker Compose
+              Requires=docker.service
+              After=docker.service
+
+              [Service]
+              Type=oneshot
+              RemainAfterExit=yes
+              WorkingDirectory=/opt/vscode/docker
+              # Debug solo para build + launch
+              Environment=COMPOSE_DOCKER_CLI_BUILD=1
+              Environment=DOCKER_BUILDKIT=1
+
+              ExecStart=/usr/bin/docker compose --verbose up -d --build
+              ExecStop=/usr/bin/docker compose down
+              TimeoutStartSec=0
+
+              [Install]
+              WantedBy=multi-user.target
+            mode: "0644"
+        - name: Enable and start vscode-server service
+          systemd:
+            name: vscode-server
+            enabled: true
+            state: restarted
+            daemon_reload: true

@@ -37,9 +37,11 @@ jobs:
             (.smtp_security       | type=="string") and
             (.smtp_username       | type=="string") and
             (.smtp_password       | type=="string") and
-            (.smtp_port           | type=="number")
+            (.smtp_port           | type=="number") and
+            (.pem_github          | type=="string")
           ' <<<"$VARS" >/dev/null || { echo "Error: VARS_JSON schema invalid"; exit 1; }
           echo "VARS_JSON schema valid"
+
       - name: Validate SERVICE_ACCOUNT schema
         env:
           SA: ${{ secrets.SERVICE_ACCOUNT }}
