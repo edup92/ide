@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Asignar Fw temporal para SSH
+# ----------------------------------------
+# Start ssh-agent and load key without files
+# ----------------------------------------
+eval "$(ssh-agent -s)"
+ssh-add <(printf "%s" "$INSTANCE_SSH_KEY")
+echo "SSH key loaded into ssh-agent (memory only)"
+
+# ----------------------------------------
+# Assign temporary firewall
+# ----------------------------------------
 echo "Assigning temporary SSH firewall: $FW_TEMPSSH_NAME"
 
-gcloud compute firewall-rules update $FW_TEMPSSH_NAME \
---project=$PROJECT_ID \
---no-disabled
+gcloud compute firewall-rules update "$FW_TEMPSSH_NAME" \
+  --project="$PROJECT_ID" \
+  --no-disabled
 
 echo "Temporary SG applied."
-
 echo "Waiting for instance SSH"
 
 OK=0
@@ -18,8 +26,7 @@ for i in {1..14}; do
       -o ConnectTimeout=3 \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
-      -i "$INSTANCE_SSH_KEY" \
-      $INSTANCE_USER@"$INSTANCE_IP" 'exit' >/dev/null 2>&1 && {
+      "$INSTANCE_USER@$INSTANCE_IP" 'exit' >/dev/null 2>&1 && {
         echo "SSH available."
         OK=1
         break
@@ -29,54 +36,73 @@ for i in {1..14}; do
 done
 
 if [ "$OK" -ne 1 ]; then
-  echo "ERROR: Instance unreachable, Restoring main firewall: $FW_TEMPSSH_NAME"
-  # Restaurar SG principal
-
-  gcloud compute firewall-rules update $FW_TEMPSSH_NAME \
-  --project=$PROJECT_ID 
+  echo "ERROR: Instance unreachable, restoring firewall"
+  gcloud compute firewall-rules update "$FW_TEMPSSH_NAME" --project="$PROJECT_ID"
   exit 1
 fi
 
-# Check if is installed
+# ----------------------------------------
+# Check if playbook was already executed
+# ----------------------------------------
 echo "Checking if playbook was already executed..."
 
 if ssh -o BatchMode=yes \
       -o ConnectTimeout=3 \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
-      -i "$INSTANCE_SSH_KEY" \
-      $INSTANCE_USER@"$INSTANCE_IP" \
-      "test -f /.installed"; then
-
-    echo "Playbook already installed. Exiting."
+      "$INSTANCE_USER@$INSTANCE_IP" "test -f /var/local/.installed"; then
+    echo "Playbook already installed"
+    echo "If you need to rerun the playbook you need to enter the server and do sudo rm /var/local/.installed"
+    echo "Restoring firewall: $FW_TEMPSSH_NAME"
+    gcloud compute firewall-rules update "$FW_TEMPSSH_NAME" \
+      --project="$PROJECT_ID" \
+      --disabled
+    echo "Exiting."
     exit 0
 fi
 
-# Ejecutar Ansible
+echo "Playbook NOT installed. Continuing..."
+
+# ----------------------------------------
+# Validate JSON
+# ----------------------------------------
+echo "Validating JSON..."
+
+if echo "$VARS_JSON" | jq -e . >/dev/null 2>&1; then
+  echo "JSON valid."
+else
+  echo "ERROR: Invalid JSON"
+  exit 1
+fi
+
+# ----------------------------------------
+# Run Ansible without private key argument (ssh-agent handles it)
+# ----------------------------------------
 ansible-playbook \
-  -i "$INSTANCE_IP," \
-  --user $INSTANCE_USER \
-  --private-key "$INSTANCE_SSH_KEY" \
-  --extra-vars "@$VARS_FILE" \
+  -i "${INSTANCE_IP}," -e ansible_python_interpreter=/usr/bin/python3 \
+  --user "$INSTANCE_USER" \
+  --extra-vars "$VARS_JSON" \
   --ssh-extra-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
   "$PLAYBOOK_PATH"
 
-# Marking as installed
-
-echo "Settign as installed"
+echo "Ansible finished correctly"
 
 ssh -o BatchMode=yes \
     -o ConnectTimeout=3 \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
-    -i "$INSTANCE_SSH_KEY" \
-    $INSTANCE_USER@"$INSTANCE_IP" \
-    "sudo touch /.installed"
+    "$INSTANCE_USER@$INSTANCE_IP" \
+    "sudo touch /var/local/.installed"
 
-# Restaurar SG principal
-echo "Restoring main firewall: $FW_TEMPSSH_NAME"
+echo "Marked as installed"
 
-gcloud compute firewall-rules update $FW_TEMPSSH_NAME \
---project=$PROJECT_ID 
+# ----------------------------------------
+# Restore main firewall
+# ----------------------------------------
+echo "Restoring firewall: $FW_TEMPSSH_NAME"
+
+gcloud compute firewall-rules update "$FW_TEMPSSH_NAME" \
+  --project="$PROJECT_ID" \
+  --disabled
 
 echo "DONE"

@@ -1,104 +1,229 @@
 name: main
-
 on:
   workflow_dispatch:
-  
 permissions:
   contents: read
   issues: write
 
 jobs:
-  main:
+
+  validate-secrets:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Terraform CLI
-        uses: hashicorp/setup-terraform@v3
-      - name: Setup Ansible
-        run: sudo apt-get install -y ansible
-      - name: Check VARS secret exists
+      - name: Check required secrets exist
         env:
           VARS_JSON: ${{ secrets.VARS_JSON }}
+          SERVICE_ACCOUNT: ${{ secrets.SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$VARS_JSON" ]; then
-            echo "Error: Secret VARS is missing or empty"
-            exit 1
-          fi
-      - name: Export VARS env as outputs
-        id: export_vars
-        env:
-          VARS_JSON: ${{ secrets.VARS_JSON }}
-        run: |
-          jq -r 'keys[]' <<< "$VARS_JSON" | while read -r key; do
-            value=$(jq -r --arg k "$key" '.[$k]' <<< "$VARS_JSON")
-            delim="EOF_$(openssl rand -hex 4)"
-            { echo "$key<<$delim"; echo "$value"; echo "$delim"; } >> "$GITHUB_OUTPUT"
-            echo "Output $key"
+          for s in VARS_JSON SERVICE_ACCOUNT; do
+            if [ -z "${!s}" ]; then
+              echo "Error: Missing required secret: $s"
+              exit 1
+            fi
           done
-      - name: Create vars.json from secret
+          echo "All required secrets exist"
+      - name: Validate VARS_JSON schema
+        env:
+          VARS: ${{ secrets.VARS_JSON }}
         run: |
-          echo '${{ secrets.VARS_JSON }}' > vars.json
+          jq -e '
+            (.gcloud_project_id   | type=="string") and
+            (.gcloud_region       | type=="string") and
+            (.project_name        | type=="string") and
+            (.dns_record          | type=="string") and
+            (.admin_email         | type=="string") and
+            (.admin_pass          | type=="string") and
+            (.smtp_host           | type=="string") and
+            (.smtp_security       | type=="string") and
+            (.smtp_username       | type=="string") and
+            (.smtp_password       | type=="string") and
+            (.smtp_port           | type=="number")
+          ' <<<"$VARS" >/dev/null || { echo "Error: VARS_JSON schema invalid"; exit 1; }
+          echo "VARS_JSON schema valid"
+      - name: Validate SERVICE_ACCOUNT schema
+        env:
+          SA: ${{ secrets.SERVICE_ACCOUNT }}
+        run: |
+          jq -e '
+            (.type | type=="string") and
+            (.project_id | type=="string") and
+            (.private_key_id | type=="string") and
+            (.private_key | type=="string") and
+            (.client_email | type=="string") and
+            (.client_id | type=="string") and
+            (.auth_uri | type=="string") and
+            (.token_uri | type=="string") and
+            (.auth_provider_x509_cert_url | type=="string") and
+            (.client_x509_cert_url | type=="string") and
+            (.universe_domain | type=="string")
+          ' <<<"$SA" >/dev/null || { echo "Error: SERVICE_ACCOUNT schema invalid"; exit 1; }
+          echo "SERVICE_ACCOUNT schema valid"
+
+  prepare-backend:
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    steps:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.SERVICE_ACCOUNT }} 
-      - name: Setup gcloud
+          credentials_json: ${{ secrets.SERVICE_ACCOUNT }}
+      - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{steps.export_vars.outputs.gcloud_project_id}}
-      - name: Creates / Checks state bucket (GCS)
+          project_id: ${{ fromJson(secrets.VARS_JSON).gcloud_project_id }}
+      - name: Create or check state bucket
         env:
-          BUCKET_NAME: ${{ steps.export_vars.outputs.project_name }}-bucket-tfstate
-          GCP_PROJECT: ${{ steps.export_vars.outputs.gcloud_project_id }}
-          GCP_REGION: ${{ steps.export_vars.outputs.gcloud_region }}
+          PROJECT_NAME: ${{ fromJson(secrets.VARS_JSON).project_name }}
+          GCP_PROJECT: ${{ fromJson(secrets.VARS_JSON).gcloud_project_id }}
+          GCP_REGION: ${{ fromJson(secrets.VARS_JSON).gcloud_region }}
+          BUCKET_NAME: ${{ fromJson(secrets.VARS_JSON).project_name }}-bucket-tfstate
         run: |
-          # 1. Check if bucket exists
           if gsutil ls -p "$GCP_PROJECT" "gs://$BUCKET_NAME" >/dev/null 2>&1; then
-            echo "Bucket already exists: $BUCKET_NAME"
+            echo "Bucket already exists: $BUCKET_NAME, skipping creation"
           else
-            echo "Bucket does not exist. Creating: $BUCKET_NAME"
-
-            # 2. Create bucket with region
-            echo "Creating bucket in region: $GCP_REGION"
             gsutil mb -p "$GCP_PROJECT" -l "$GCP_REGION" "gs://$BUCKET_NAME"
-
-            # 3. Block all public access (recommended)
-            echo "Enabling uniform bucket-level access"
             gcloud storage buckets update gs://$BUCKET_NAME --uniform-bucket-level-access
-
-            # 4. Enable versioning
-            echo "Enabling versioning"
             gsutil versioning set on "gs://$BUCKET_NAME"
+            echo "Bucket created with versioning: $BUCKET_NAME"
           fi
-      - name: Create TF Backend (jq -> backend.tf.json)
+      - name: Create TF Backend
         env:
-          BUCKET_NAME: ${{steps.export_vars.outputs.project_name}}-bucket-tfstate
-          AWS_REGION: ${{steps.export_vars.outputs.aws_region}}
+          BUCKET_NAME: ${{ fromJson(secrets.VARS_JSON).project_name }}-bucket-tfstate
         run: |
           tee backend.tf > /dev/null <<EOF
           terraform {
             backend "gcs" {
               bucket = "$BUCKET_NAME"
-              prefix    = ""
+              prefix = ""
             }
           }
           EOF
-          echo "backend.tf created"
+          echo "backend.tf file generated successfully"
+      - name: Upload backend.tf
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfbackend
+          path: backend.tf
+
+  prepare-tfvars:
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    steps:
+      - name: Generate terraform.auto.tfvars.json
+        env:
+          VARS: ${{ secrets.VARS_JSON }}
+        run: |
+          echo "Storing keys into terraform.auto.tfvars.json:"
+          echo "$VARS" | jq -r 'keys[]' | sed "s/^/ - /"
+          printf '%s\n' "$VARS" > terraform.auto.tfvars.json
+      - name: Upload terraform.auto.tfvars.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfvars
+          path: terraform.auto.tfvars.json
+
+  tf-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - prepare-backend
+      - prepare-tfvars
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.SERVICE_ACCOUNT }}
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Download backend.tf
+        uses: actions/download-artifact@v4
+        with:
+          name: tfbackend
+          path: .
+      - name: Download terraform.auto.tfvars.json
+        uses: actions/download-artifact@v4
+        with:
+          name: tfvars
+          path: .
       - name: Terraform init
         run: terraform init -input=false
-      - name: Terraform plan (using vars.json)
-        run: terraform plan -input=false -no-color -var-file=vars.json -out=tfplan
-      - name: Terraform show
-        run: terraform show -no-color tfplan > plan.txt
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color -out=tfplan
+      - name: Generate visual plan
+        run: terraform show -no-color tfplan > tfplan_visual
+      - name: Upload plan artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-artifacts
+          path: |
+            tfplan
+            tfplan_visual
+
+  approbal:
+    runs-on: ubuntu-latest
+    needs: tf-plan
+    steps:
+      - name: Download tfplan artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-artifacts
+          path: .
       - name: Await Manual Approval
-        id: approval
+        timeout-minutes: 5
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ secrets.GITHUB_TOKEN }}
           minimum-approvals: 1
           approvers: ${{ github.actor }}
           issue-title: "Manual Approval Required for Terraform Apply"
-          issue-body-file-path: plan.txt
+          issue-body-file-path: tfplan_visual
+
+  tf-apply:
+    runs-on: ubuntu-latest
+    needs:
+      - approbal
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.SERVICE_ACCOUNT }}
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Install Ansible
+        run: sudo apt-get install -y ansible
+      - name: Download tfplan artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-artifacts
+          path: .
+      - name: Download backend.tf
+        uses: actions/download-artifact@v4
+        with:
+          name: tfbackend
+          path: .
+      - name: Download terraform.auto.tfvars.json
+        uses: actions/download-artifact@v4
+        with:
+          name: tfvars
+          path: .
+      - name: Set execute permissions for null_resources scripts
+        run: |
+          if [ -d "./src/null_resources" ]; then
+            chmod +x ./src/null_resources/*.sh || true
+            ls -l ./src/null_resources
+          else
+            echo "Directory ./src/null_resources does not exist"
+            exit 1
+          fi
+      - name: Terraform init
+        run: terraform init -input=false
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan

@@ -14,44 +14,11 @@ variable "gcloud_region" {
   type        = string
 }
 
-variable "cf_token" {
-  description = "Cloudflare Token"
-  type        = string
-}
-
-variable "cf_accountid" {
-  description = "Cloudflare Account ID"
-  type        = string
-}
-
-variable "dns_domain" {
-  description = "Fully Qualified Domain Name (FQDN) "
-  type        = string
-}
-
 variable "dns_record" {
   description = "DNS record"
   type        = string
 }
-
-variable "allowed_countries" {
-  description = "List of allowed countries for access control"
-  type        = list(string)
-  default     = []
-}
-
 variable "admin_email" {
   description = "Administrator email address for the Bitwarden instance"
   type        = string
-}
-
-variable "oauth_client_id" {
-  description = "OAuth client ID for Google SSO authentication"
-  type        = string
-}
-
-variable "oauth_client_secret" {
-  description = "OAuth client secret for Google SSO authentication"
-  type        = string
-  sensitive   = true
 }

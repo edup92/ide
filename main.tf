@@ -1,14 +1,8 @@
-# Pems
+# SSH Key
 
 resource "tls_private_key" "pem_ssh" {
   algorithm = "RSA"
   rsa_bits  = 4096
-}
-
-resource "local_file" "file_pem_ssh" {
-  filename        = "/tmp/pem_ssh"
-  content         = tls_private_key.pem_ssh.private_key_pem
-  file_permission = "0600"
 }
 
 resource "google_secret_manager_secret" "secret_pem_ssh" {
@@ -26,30 +20,24 @@ resource "google_secret_manager_secret_version" "secretversion_pem_ssh" {
   })
 }
 
-resource "google_compute_project_metadata" "metadata_pem_ssh" {
-  project = var.gcloud_project_id
-  metadata = {
-    ssh-keys = "ubuntu:${tls_private_key.pem_ssh.public_key_openssh}"
-  }
-}
-
 # Instance
 
 resource "google_compute_instance" "instance_main" {
   name         = local.instance_main_name
   project      = var.gcloud_project_id
-  machine_type = "e2-medium"
-  zone          = data.google_compute_zones.available.names[1]
+  machine_type = local.instance_type
+  zone          = data.google_compute_zones.available.names[0]
   metadata = {
     enable-osconfig = "TRUE"
   }
+  allow_stopping_for_update = true
   boot_disk {
-    auto_delete = false
+    auto_delete = true
     device_name = local.disk_main_name
     initialize_params {
-      image = "projects/ubuntu-os-cloud/global/images/ubuntu-minimal-2404-noble-amd64-v20251002"
-      size  = 25
-      type  = "pd-balanced"
+      image = local.instance_os
+      type  = local.disk_type
+      size  = local.disk_size
     }
   }
   network_interface {
@@ -93,7 +81,7 @@ resource "google_compute_resource_policy" "snapshot_policy" {
       }
     }
     retention_policy {
-      max_retention_days    = 31
+      max_retention_days    = local.snapshot_retention
       on_source_disk_delete = "KEEP_AUTO_SNAPSHOTS"
     }
   }
@@ -104,7 +92,6 @@ resource "google_compute_disk_resource_policy_attachment" "disk_policy_attachmen
   disk    = google_compute_instance.instance_main.name
   zone    = data.google_compute_zones.available.names[1]
   project = var.gcloud_project_id
-
   depends_on = [google_compute_instance.instance_main]
 }
 
@@ -121,20 +108,20 @@ resource "google_compute_firewall" "fw_localssh" {
     ports    = ["22"]
   }
   source_ranges = ["35.235.240.0/20"]
-  target_tags   = [local.instance_main_name]
+  target_tags   = [google_compute_instance.instance_main.name]
 }
 
-resource "google_compute_firewall" "fw_cf" {
-  name    = local.firewall_cf_name
+resource "google_compute_firewall" "fw_lb" {
+  name    = local.firewall_lb_name
   project = var.gcloud_project_id
   network = "default"
   direction = "INGRESS"
   priority  = 1000
   allow {
     protocol = "tcp"
-    ports    = ["443"]
+    ports    = ["80"]
   }
-  source_ranges = data.cloudflare_ip_ranges.cloudflare.ipv4_cidr_blocks
+  source_ranges = ["35.191.0.0/16","130.211.0.0/22"]
   target_tags   = [google_compute_instance.instance_main.name]
 }
 
@@ -149,100 +136,109 @@ resource "google_compute_firewall" "fw_tempssh" {
     ports    = ["22"]
   }
   source_ranges = ["0.0.0.0/0"]
-  target_tags   = [local.instance_main_name]
+  target_tags   = [google_compute_instance.instance_main.name]
   disabled = true
+}
+
+# LB
+
+resource "google_compute_instance_group" "instancegroup_main" {
+  name        = local.instancegroup_main_name
+  zone    = data.google_compute_zones.available.names[0]
+  instances = [google_compute_instance.instance_main.self_link]
+  named_port {
+    name = "http"
+    port = 80
+  }
+}
+
+resource "google_compute_health_check" "healthcheck_main" {
+  name                = local.healthcheck_main_name
+  check_interval_sec  = 5
+  timeout_sec         = 5
+  healthy_threshold   = 2
+  unhealthy_threshold = 2
+  http_health_check {
+    port         = 80
+    request_path = "/"
+  }
+}
+
+resource "google_compute_backend_service" "backend_main" {
+  name                  = local.backend_main_name
+  protocol              = "HTTP"
+  port_name             = "http"
+  load_balancing_scheme = "EXTERNAL"
+  health_checks         = [google_compute_health_check.healthcheck_main.self_link]
+  connection_draining_timeout_sec = 10
+  backend {
+    group = google_compute_instance_group.instancegroup_main.self_link
+  }
+  lifecycle {
+    ignore_changes = [iap]         # <- clave para no deshabilitarlo
+  }
+}
+
+resource "google_compute_url_map" "urlmap_main" {
+  name            = local.urlmap_main_name
+  default_service = google_compute_backend_service.backend_main.self_link
+}
+
+resource "google_compute_managed_ssl_certificate" "ssl_main" {
+  name = local.ssl_main_name
+  managed {
+    domains = [var.dns_record]
+  }
+}
+
+resource "google_compute_target_https_proxy" "computetarget_main" {
+  name             = local.computetarget_main_name
+  url_map          = google_compute_url_map.urlmap_main.self_link
+  ssl_certificates = [google_compute_managed_ssl_certificate.ssl_main.self_link]
+}
+
+resource "google_compute_global_address" "ip_lb" {
+  name = local.ip_lb_name
+}
+
+resource "google_compute_global_forwarding_rule" "fr_main" {
+  name                  = local.fr_lb_name
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL"
+  port_range            = "443"
+  target                = google_compute_target_https_proxy.computetarget_main.self_link
+  ip_address            = google_compute_global_address.ip_lb.address
 }
 
 # Playbook
 
 resource "null_resource" "null_ansible_install" {
   depends_on = [
-    local_file.file_pem_ssh,
+    tls_private_key.pem_ssh,
     google_compute_instance.instance_main,
     google_compute_firewall.fw_tempssh,
   ]
   triggers = {
     instance_id   = google_compute_instance.instance_main.id
-    playbook_hash = filesha256("${path.module}/src/ansible/install_original.yml")
+    playbook_hash = filesha256(local.ansible_path)
   }
   provisioner "local-exec" {
     environment = {
       PROJECT_ID    = var.gcloud_project_id
       INSTANCE_IP    = google_compute_instance.instance_main.network_interface[0].access_config[0].nat_ip
-      INSTANCE_USER  = "ubuntu"
-      INSTANCE_SSH_KEY = local_file.file_pem_ssh.filename
+      INSTANCE_USER  = local.ansible_user
+      INSTANCE_SSH_KEY = nonsensitive(tls_private_key.pem_ssh.private_key_pem)
       FW_TEMPSSH_NAME  = google_compute_firewall.fw_tempssh.name
-      VARS_FILE      = "${path.module}/vars.json"
-      PLAYBOOK_PATH = "${path.module}/src/ansible/install_original.yml"
+      VARS_JSON = nonsensitive(local.ansible_vars)
+      PLAYBOOK_PATH = local.ansible_path
     }
-    command = "chmod +x ${path.module}/src/null_resource/ansible.sh && ${path.module}/src/null_resource/ansible.sh"
+    command = local.ansible_null_resource
   }
 }
 
-# Cloudflare
+# Outpupts
 
-resource "cloudflare_record" "dnsrecord_main" {
-  zone_id = data.cloudflare_zone.zone_main.id
-  name    = var.dns_record
-  type    = "A"
-  value   = google_compute_instance.instance_main.network_interface[0].access_config[0].nat_ip
-  ttl     = 1
-  proxied = true
-  allow_overwrite = true
-}
-
-resource "cloudflare_zone_settings_override" "zonesettings_main" {
-  zone_id = data.cloudflare_zone.zone_main.id
-  settings {
-    ssl                     = "full"
-    min_tls_version         = "1.2"
-    automatic_https_rewrites = "on"
-    always_use_https        = "on"
-  }
-}
-
-resource "cloudflare_ruleset" "ruleset_cache" {
-  count = length([
-    for r in data.cloudflare_rulesets.zone_rulesets.rulesets :
-    r
-    if r.phase == "http_request_cache_settings" && r.kind == "zone"
-  ]) == 0 ? 1 : 0
-
-  zone_id     = data.cloudflare_zone.zone_main.id
-  name        = "disable_cache_everything"
-  description = "Soft disable cache"
-  kind        = "zone"
-  phase       = "http_request_cache_settings"
-
-  rules {
-    enabled     = true
-    description = "Soft disable cache"
-    expression  = "true"
-    action      = "set_cache_settings"
-    action_parameters {
-      cache = false
-    }
-  }
-}
-
-resource "cloudflare_ruleset" "ruleset_waf" {
-  count = length([
-    for r in data.cloudflare_rulesets.zone_rulesets.rulesets :
-    r
-    if r.phase == "http_request_firewall_custom" && r.kind == "zone"
-  ]) == 0 ? 1 : 0
-  zone_id     = data.cloudflare_zone.zone_main.id
-  name        = "country-access-control"
-  description = "Block non-allowed countries"
-  kind        = "zone"
-  phase       = "http_request_firewall_custom"
-  rules {
-    enabled     = true
-    description = "Block non-allowed countries"
-    expression  = "not (${join(" or ", [
-      for c in var.allowed_countries :
-      "(ip.geoip.country eq \"${c}\")"
-    ])})"
-    action      = "block"
-  }
+output "output_ip" {
+  description = "Global IPv4 assigned to the HTTPS load balancer"
+  value       = google_compute_global_address.ip_lb.address
 }

@@ -1,19 +1,19 @@
 # IDE
 
-## Vscode/Code selfhosted in docker containers, with Google SSO Auth, Hosted in Google cloud, DNS and WAF in Cloudflare
+## Vscode/Code selfhosted in docker containers, with Google SSO Auth, Hosted in Google cloud
 
 ## Installation
-- Create zone in cloudflare and set DNS Servers
-- Create Account token in cloudflare with permissions:
-  - Account - DNS Settings:Edit
-  All zones - DNS Settings:Edit, Cache Rules:Edit, Zone WAF:Edit, Zone Settings:Edit, Zone:Edit, SSL and Certificates:Edit, Page Rules:Edit, Firewall Services:Edit, DNS:Edit
+
 - Create google account project
-- Create OAuth credentials
-  - authoriced origins: https://subdomain.mydomain.tld
-  - authoriced redirect: https://subdomain.mydomain.tld/oauth2/callback
--  Run bootstrap.sh on Cloudshell
+- Run bootstrap.sh on Cloudshell
 - Paste json data from bootstrap.sh as Github Actions Secret with name SERVICE_ACCOUNT 
 - Paste this json as Github Actions Secret with name VARS_JSON:
+
+
+-------------
+
+
+
 
 {
   "gcloud_project_id":"",
