@@ -2,6 +2,8 @@
 
 ## Vscode/Code selfhosted in docker containers, with Google SSO Auth, Hosted in Google cloud
 
+- By default installs extensions: "github.copilot", "hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"
+
 ## Installation
 
 - Create google account project
