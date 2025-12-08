@@ -217,39 +217,32 @@
 
               RUN git config --system commit.template /home/vscode/.gitmessage
 
-              # GLOBAL GIT CONFIG (user.name + user.email)
+              # GLOBAL GIT CONFIG
               ARG admin_email
               RUN git config --global user.name "vscode" \
                 && git config --global user.email "${admin_email}"
 
               ############################################################
-              # INSTALL VSCODE EXTENSIONS (OFFICIAL MICROSOFT VS CODE SERVER)
+              # INSTALL VSCODE EXTENSIONS (LIST FROM TERRAFORM → ANSIBLE)
               ############################################################
 
-              # Create extensions folder
               RUN mkdir -p /home/vscode/.vscode-server/extensions
 
-              # Download + extract helper
               RUN ext_dir="/home/vscode/.vscode-server/extensions" && \
                   download() { \
                     url="$1"; \
-                    name="$2"; \
+                    name="$(echo "$url" | awk -F'publishers/|/vsextensions/' '{print $2 "." $3}' | sed 's|/latest.*||')"; \
                     mkdir -p "$ext_dir/$name"; \
                     curl -fsSL "$url" -o /tmp/ext.vsix; \
                     unzip -q /tmp/ext.vsix -d "$ext_dir/$name"; \
                     rm /tmp/ext.vsix; \
                   }; \
-                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/github/vsextensions/copilot/latest/vspackage" "github.copilot" && \
-                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/hashicorp/vsextensions/terraform/latest/vspackage" "hashicorp.terraform" && \
-                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/redhat/vsextensions/ansible/latest/vspackage" "redhat.ansible" && \
-                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-python/vsextensions/python/latest/vspackage" "ms-python.python" && \
-                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/enkia/vsextensions/tokyo-night/latest/vspackage" "enkia.tokyo-night" && \
-                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/esbenp/vsextensions/prettier-vscode/latest/vspackage" "esbenp.prettier-vscode"
+              {% for url in extensions_url %}
+                  download "{{ url }}"{% if not loop.last %} && \{% endif %}
+              {% endfor %}
 
-              # Permissions
               RUN chown -R vscode:vscode /home/vscode/.vscode-server
 
-              # Return to vscode user
               USER vscode
             owner: vscode
             group: vscode
