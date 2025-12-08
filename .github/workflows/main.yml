@@ -31,7 +31,9 @@ jobs:
             (.gcloud_region       | type=="string") and
             (.project_name        | type=="string") and
             (.dns_record          | type=="string") and
+            (.admin_name          | type=="string") and
             (.admin_email         | type=="string") and
+            (.extensions_url      | type=="array") and
             (.pem_github          | type=="string")
           ' <<<"$VARS" >/dev/null || { echo "Error: VARS_JSON schema invalid"; exit 1; }
           echo "VARS_JSON schema valid"

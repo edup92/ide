@@ -9,25 +9,21 @@
 - Paste json data from bootstrap.sh as Github Actions Secret with name SERVICE_ACCOUNT 
 - Paste this json as Github Actions Secret with name VARS_JSON:
 
-
--------------
-
-
-
-
-{
+`{
   "gcloud_project_id":"",
   "gcloud_region":"",
-  "cf_token":"",
-  "cf_accountid": "",
   "project_name": "myproject",
-  "dns_domain": "mydomain.tld",
   "dns_record": "x.mydomain.tld",
+  "admin_name": "",
   "admin_email": "",
-  "allowed_countries": ["ES"],
-  "pem_github_private": "demo"
-  "oauth_client_id": "",
-  "oauth_client_secret": ""
-}
+  "extensions_url": [],
+  "pem_github": "MULTILINE PRIVATE PEM"
+}`
 
 - Run Github Actions
+- Go to https://console.cloud.google.com/security/iap?tab=applications&hl=es-419&project=MYPROJECT and enable IAP
+- Click in the same window on the created backend, click on add principal, on principal write authorized email (x@gmail.com) and add the role "roles/iap.httpsResourceAccessor"
+- Click in the same window on the created backend, click on configuration, set custom oauth, generate credentials and save
+- Disable and enable IAP, check if works
+
+- Debug: Check docker instances with: sudo docker ps

@@ -211,12 +211,43 @@
                 && chown vscode:vscode /home/vscode/.ssh/config
 
               # GIT COMMIT MESSAGE TEMPLATE
-
               RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here what changed and why.\n# Use bullets if needed:\n# - Change 1\n# - Change 2\n" \
                 > /home/vscode/.gitmessage \
                 && chown vscode:vscode /home/vscode/.gitmessage
 
               RUN git config --system commit.template /home/vscode/.gitmessage
+
+              # GLOBAL GIT CONFIG (user.name + user.email)
+              ARG admin_email
+              RUN git config --global user.name "vscode" \
+                && git config --global user.email "${admin_email}"
+
+              ############################################################
+              # INSTALL VSCODE EXTENSIONS (OFFICIAL MICROSOFT VS CODE SERVER)
+              ############################################################
+
+              # Create extensions folder
+              RUN mkdir -p /home/vscode/.vscode-server/extensions
+
+              # Download + extract helper
+              RUN ext_dir="/home/vscode/.vscode-server/extensions" && \
+                  download() { \
+                    url="$1"; \
+                    name="$2"; \
+                    mkdir -p "$ext_dir/$name"; \
+                    curl -fsSL "$url" -o /tmp/ext.vsix; \
+                    unzip -q /tmp/ext.vsix -d "$ext_dir/$name"; \
+                    rm /tmp/ext.vsix; \
+                  }; \
+                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/github/vsextensions/copilot/latest/vspackage" "github.copilot" && \
+                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/hashicorp/vsextensions/terraform/latest/vspackage" "hashicorp.terraform" && \
+                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/redhat/vsextensions/ansible/latest/vspackage" "redhat.ansible" && \
+                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-python/vsextensions/python/latest/vspackage" "ms-python.python" && \
+                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/enkia/vsextensions/tokyo-night/latest/vspackage" "enkia.tokyo-night" && \
+                  download "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/esbenp/vsextensions/prettier-vscode/latest/vspackage" "esbenp.prettier-vscode"
+
+              # Permissions
+              RUN chown -R vscode:vscode /home/vscode/.vscode-server
 
               # Return to vscode user
               USER vscode
@@ -232,6 +263,8 @@
                   build:
                     context: .
                     dockerfile: Dockerfile
+                    args:
+                      admin_email: "{{ admin_email }}"
                   container_name: vscode
                   restart: always
                   ports:

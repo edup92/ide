@@ -19,9 +19,20 @@ variable "dns_record" {
   type        = string
 }
 
-variable "admin_email" {
-  description = "Administrator email address for the Bitwarden instance"
+variable "admin_name" {
+  description = "Administrator name for the vscode instance"
   type        = string
+}
+
+variable "admin_email" {
+  description = "Administrator email address for the vscode instance"
+  type        = string
+}
+
+variable "extensions_url" {
+  description = "Github private pem key"
+  type        = list(string)
+  default     = []
 }
 
 variable "pem_github" {
