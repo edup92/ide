@@ -160,9 +160,9 @@
                 && apt-get clean \
                 && rm -rf /var/lib/apt/lists/*
 
-              # Allow sudo for workspace user
-              RUN echo "workspace ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/workspace \
-                  && chmod 0440 /etc/sudoers.d/workspace
+              # Allow sudo for openvscode-server user
+              RUN echo "openvscode-server ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/openvscode-server \
+                  && chmod 0440 /etc/sudoers.d/openvscode-server
 
               ############################################################
               # PYTHON
@@ -184,7 +184,7 @@
                 && rm -rf /var/lib/apt/lists/*
 
               ############################################################
-              # NODE LTS
+              # NODE.JS LTS
               ############################################################
               RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
                 && apt-get install -y nodejs \
@@ -220,28 +220,28 @@
               ############################################################
               # SSH CONFIG
               ############################################################
-              RUN mkdir -p /home/workspace/.ssh \
-                && chmod 700 /home/workspace/.ssh \
-                && touch /home/workspace/.ssh/known_hosts \
-                && ssh-keyscan github.com >> /home/workspace/.ssh/known_hosts \
-                && chown -R workspace:workspace /home/workspace/.ssh
+              RUN mkdir -p /home/openvscode-server/.ssh \
+                && chmod 700 /home/openvscode-server/.ssh \
+                && touch /home/openvscode-server/.ssh/known_hosts \
+                && ssh-keyscan github.com >> /home/openvscode-server/.ssh/known_hosts \
+                && chown -R openvscode-server:openvscode-server /home/openvscode-server/.ssh
 
               RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes" \
-                > /home/workspace/.ssh/config \
-                && chmod 600 /home/workspace/.ssh/config \
-                && chown workspace:workspace /home/workspace/.ssh/config
+                > /home/openvscode-server/.ssh/config \
+                && chmod 600 /home/openvscode-server/.ssh/config \
+                && chown openvscode-server:openvscode-server /home/openvscode-server/.ssh/config
 
               ############################################################
               # GIT CONFIG
               ############################################################
-              RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here what changed and why." \
-                > /home/workspace/.gitmessage \
-                && chown workspace:workspace /home/workspace/.gitmessage
+              RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here changed and why.\n" \
+                > /home/openvscode-server/.gitmessage \
+                && chown openvscode-server:openvscode-server /home/openvscode-server/.gitmessage
 
-              RUN git config --system commit.template /home/workspace/.gitmessage
+              RUN git config --system commit.template /home/openvscode-server/.gitmessage
 
               ARG admin_email
-              RUN git config --global user.name "workspace" \
+              RUN git config --global user.name "openvscode-server" \
                 && git config --global user.email "${admin_email}"
 
               ############################################################
@@ -254,9 +254,10 @@
               ############################################################
               # FIX OWNERSHIP
               ############################################################
-              RUN chown -R workspace:workspace /home/workspace
+              RUN chown -R openvscode-server:openvscode-server /home/openvscode-server \
+              && chown -R openvscode-server:openvscode-server /home/workspace
 
-              USER workspace
+              USER openvscode-server
 
               ############################################################
               # START OPENVSCODE SERVER
