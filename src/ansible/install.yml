@@ -143,8 +143,9 @@
 
               USER root
 
+              ############################################################
               # BASE TOOLS
-
+              ############################################################
               RUN apt-get update && apt-get install -y \
                   git \
                   unzip \
@@ -159,12 +160,13 @@
                 && apt-get clean \
                 && rm -rf /var/lib/apt/lists/*
 
-              # Enable sudo for user 'openvscode'
-              RUN echo "openvscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/openvscode \
-                  && chmod 0440 /etc/sudoers.d/openvscode
+              # Enable sudo for user 'workspace'
+              RUN echo "workspace ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/workspace \
+                  && chmod 0440 /etc/sudoers.d/workspace
 
+              ############################################################
               # PYTHON
-
+              ############################################################
               RUN apt-get update && apt-get install -y \
                   python3 \
                   python3-pip \
@@ -172,23 +174,26 @@
                 && apt-get clean \
                 && rm -rf /var/lib/apt/lists/*
 
+              ############################################################
               # ANSIBLE
-
+              ############################################################
               RUN add-apt-repository --yes --update ppa:ansible/ansible \
                 && apt-get update \
                 && apt-get install -y ansible \
                 && apt-get clean \
                 && rm -rf /var/lib/apt/lists/*
 
+              ############################################################
               # NODE.JS LTS
-
+              ############################################################
               RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
                 && apt-get install -y nodejs \
                 && apt-get clean \
                 && rm -rf /var/lib/apt/lists/*
 
+              ############################################################
               # TERRAFORM
-
+              ############################################################
               RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg \
                 && echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
                   > /etc/apt/sources.list.d/hashicorp.list \
@@ -197,58 +202,66 @@
                 && apt-get clean \
                 && rm -rf /var/lib/apt/lists/*
 
+              ############################################################
               # TERRAGRUNT
-
+              ############################################################
               RUN wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.93.8/terragrunt_linux_amd64 \
                 && install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt \
                 && rm terragrunt_linux_amd64
 
+              ############################################################
               # AWS CLI v2
-
+              ############################################################
               RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
                 && unzip awscliv2.zip \
                 && ./aws/install \
                 && rm -rf aws awscliv2.zip
 
+              ############################################################
               # SSH CONFIG
-
-              RUN mkdir -p /home/openvscode/.ssh \
-                && chmod 700 /home/openvscode/.ssh \
-                && touch /home/openvscode/.ssh/known_hosts \
-                && ssh-keyscan github.com >> /home/openvscode/.ssh/known_hosts \
-                && chown -R openvscode:openvscode /home/openvscode/.ssh
+              ############################################################
+              RUN mkdir -p /home/workspace/.ssh \
+                && chmod 700 /home/workspace/.ssh \
+                && touch /home/workspace/.ssh/known_hosts \
+                && ssh-keyscan github.com >> /home/workspace/.ssh/known_hosts \
+                && chown -R workspace:workspace /home/workspace/.ssh
 
               RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes" \
-                > /home/openvscode/.ssh/config \
-                && chmod 600 /home/openvscode/.ssh/config \
-                && chown openvscode:openvscode /home/openvscode/.ssh/config
+                > /home/workspace/.ssh/config \
+                && chmod 600 /home/workspace/.ssh/config \
+                && chown workspace:workspace /home/workspace/.ssh/config
 
+              ############################################################
               # GIT CONFIG
-
+              ############################################################
               RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here what changed and why.\n# Use bullets if needed:\n# - Change 1\n# - Change 2\n" \
-                > /home/openvscode/.gitmessage \
-                && chown openvscode:openvscode /home/openvscode/.gitmessage
+                > /home/workspace/.gitmessage \
+                && chown workspace:workspace /home/workspace/.gitmessage
 
-              RUN git config --system commit.template /home/openvscode/.gitmessage
+              RUN git config --system commit.template /home/workspace/.gitmessage
 
               ARG admin_email
-              RUN git config --global user.name "openvscode" \
+              RUN git config --global user.name "workspace" \
                 && git config --global user.email "${admin_email}"
 
-              # INSTALL EXTENSIONS (web-compatible only)
+              ############################################################
+              # INSTALL EXTENSIONS (WEB ONLY)
+              ############################################################
 
               {% for ext in extensions %}
               RUN /openvscode-server/bin/openvscode-server --install-extension "{{ ext }}"
               {% endfor %}
 
+              ############################################################
               # FIX OWNERSHIP
+              ############################################################
+              RUN chown -R workspace:workspace /home/workspace
 
-              RUN chown -R openvscode:openvscode /home/openvscode
+              USER workspace
 
-              USER openvscode
-
+              ############################################################
               # START OPENVSCODE SERVER
-
+              ############################################################
               CMD ["/openvscode-server/bin/openvscode-server", "--host", "0.0.0.0", "--port", "8000", "--without-connection-token"]
             owner: vscode
             group: vscode
@@ -270,9 +283,9 @@
                     - "80:8000"
                   volumes:
                     - ../data:/workspace
-                    - ../extensions:/home/openvscode/.openvscode-server/extensions
-                    - ../userdata:/home/openvscode/.openvscode-server/User
-                    - ../pem/github_pem:/home/openvscode/.ssh/id_ed25519:ro
+                    - ../extensions:/home/workspace/.openvscode-server/extensions
+                    - ../userdata:/home/workspace/.openvscode-server/User
+                    - ../pem/github_pem:/home/workspace/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
             mode: "0644"
