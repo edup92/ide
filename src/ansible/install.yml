@@ -270,9 +270,9 @@
                     - "80:8000"
                   volumes:
                     - ../data:/workspace
-                    - ../extensions:/home/vscode/.vscode-server/extensions
-                    - ../userdata:/home/vscode/.vscode-server/data/User
-                    - ../pem/github_pem:/home/vscode/.ssh/id_ed25519:ro
+                    - ../extensions:/home/openvscode/.openvscode-server/extensions
+                    - ../userdata:/home/openvscode/.openvscode-server/User
+                    - ../pem/github_pem:/home/openvscode/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
             mode: "0644"
