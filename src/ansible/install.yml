@@ -155,134 +155,45 @@
           copy:
             dest: "/opt/vscode/docker/Dockerfile"
             content: |-
-              FROM ghcr.io/coder/code-server
+              FROM ghcr.io/coder/code-server:latest
 
               USER root
 
-              ############################################################
-              # BASE TOOLS
-              ############################################################
               RUN apt-get update && apt-get install -y \
-                  git \
-                  unzip \
-                  nano \
-                  wget \
-                  curl \
-                  jq \
-                  software-properties-common \
-                  gnupg \
-                  sudo \
-                  openssh-client \
-                && apt-get clean \
+                git unzip nano wget curl jq sudo gnupg software-properties-common \
+                openssh-client \
+                python3 python3-pip python3-venv \
                 && rm -rf /var/lib/apt/lists/*
 
-              # Allow sudo for coder user
-              RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
-              && chmod 0440 /etc/sudoers.d/coder
-
-              ############################################################
-              # PYTHON
-              ############################################################
-              RUN apt-get update && apt-get install -y \
-                  python3 \
-                  python3-pip \
-                  python3-venv \
-                && apt-get clean \
-                && rm -rf /var/lib/apt/lists/*
-
-              ############################################################
-              # ANSIBLE
-              ############################################################
               RUN add-apt-repository --yes --update ppa:ansible/ansible \
-              && apt-get update \
-              && apt-get install -y ansible \
-              && apt-get clean \
+              && apt-get update && apt-get install -y ansible \
               && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # NODE.JS LTS
-              ############################################################
               RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
               && apt-get install -y nodejs \
-              && apt-get clean \
               && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # TERRAFORM
-              ############################################################
               RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg \
               && echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
-                  > /etc/apt/sources.list.d/hashicorp.list \
-              && apt-get update \
-              && apt-get install -y terraform \
-              && apt-get clean \
+              > /etc/apt/sources.list.d/hashicorp.list \
+              && apt-get update && apt-get install -y terraform \
               && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # TERRAGRUNT
-              ############################################################
               RUN wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.93.8/terragrunt_linux_amd64 \
               && install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt \
               && rm terragrunt_linux_amd64
 
-              ############################################################
-              # AWS CLI v2
-              ############################################################
-              RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-              && unzip awscliv2.zip \
-              && ./aws/install \
-              && rm -rf aws awscliv2.zip
+              RUN curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip \
+              && unzip awscliv2.zip && ./aws/install && rm -rf aws awscliv2.zip
 
-              ############################################################
-              # SSH CONFIG
-              ############################################################
+              RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
+              && chmod 0440 /etc/sudoers.d/coder
+
               RUN mkdir -p /home/coder/.ssh \
               && chmod 700 /home/coder/.ssh \
-              && touch /home/coder/.ssh/known_hosts \
               && ssh-keyscan github.com >> /home/coder/.ssh/known_hosts \
               && chown -R coder:coder /home/coder/.ssh
 
-              RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes" \
-              > /home/coder/.ssh/config \
-              && chmod 600 /home/coder/.ssh/config \
-              && chown coder:coder /home/coder/.ssh/config
-
-              ############################################################
-              # GIT CONFIG
-              ############################################################
-              RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here changed and why.\n" \
-              > /home/coder/.gitmessage \
-              && chown coder:coder /home/coder/.gitmessage
-
-              RUN git config --system commit.template /home/coder/.gitmessage
-
-              ARG admin_email
-              RUN git config --global user.name "coder" \
-              && git config --global user.email "${admin_email}"
-
-              ############################################################
-              # ENABLE MICROSOFT MARKETPLACE (MACHINE SETTINGS)
-              ############################################################
-              USER coder
-              WORKDIR /home/coder
-
-              RUN mkdir -p /home/coder/.local/share/code-server/Machine
-              COPY settings/machine.json /home/coder/.local/share/code-server/Machine/settings.json
-
-              ############################################################
-              # CUSTOM FAVICONS (ALL)
-              ############################################################
-              #USER root
-              #COPY favicon/favicon.ico        /usr/lib/code-server/src/browser/media/favicon.ico
-              #COPY favicon/favicon.svg        /usr/lib/code-server/src/browser/media/favicon.svg
-              #COPY favicon/favicon-dark.svg   /usr/lib/code-server/src/browser/media/favicon-dark.svg
-              #COPY favicon/favicon-light.svg  /usr/lib/code-server/src/browser/media/favicon-light.svg
-
-              #RUN chown -R coder:coder /usr/lib/code-server/src/browser/media
-
-              ############################################################
-              # FINAL USER & START
-              ############################################################
               USER coder
 
               EXPOSE 8080
@@ -299,12 +210,10 @@
                   build:
                     context: ..
                     dockerfile: docker/Dockerfile
-                    args:
-                      admin_email: "{{ admin_email }}"
                   container_name: vscode
                   restart: always
                   ports:
-                    - "80:8000"
+                    - "80:8080"
                   volumes:
                     - ../data:/home/coder/project
                     - ../extensions:/home/coder/.local/share/code-server/extensions
