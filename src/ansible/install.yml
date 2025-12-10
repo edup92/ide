@@ -137,40 +137,13 @@
             dest: "/opt/vscode/settings/machine.json" 
             content: |
               {
-                "editor.tabSize": 2,
-                "editor.insertSpaces": true,
-                "editor.detectIndentation": false,
-                "editor.defaultFormatter": "esbenp.prettier-vscode",
-                "python.formatting.provider": "black",
-                "editor.formatOnSave": true,
-                "editor.minimap.enabled": false,
-                "workbench.colorTheme": "Tokyo Night",
-                "window.commandCenter": false,
-                "editor.lineNumbers": "on",
-                "editor.stickyScroll.enabled": false,
-                "files.autoSave": "onWindowChange",
-                "workbench.editorAssociations": {
-                    "*.md": "vscode.markdown.preview.editor",
-                    "*.MD": "vscode.markdown.preview.editor"
+                "extensionsGallery": {
+                  "serviceUrl": "https://marketplace.visualstudio.com/_apis/public/gallery",
+                  "cacheUrl": "https://vscode.blob.core.windows.net/gallery/index",
+                  "itemUrl": "https://marketplace.visualstudio.com/items"
                 },
-                "workbench.sideBar.location": "left",
-                "workbench.statusBar.visible": true,
-                "workbench.tree.enableStickyScroll": true,
-                "workbench.view.alwaysShowHeaderActions": false,
-                "window.density.editorTabHeight": "default",
-                "git.autofetch": false,
-                "git.enableSmartCommit": true,
-                "git.postCommitCommand": "sync",
-                "ansible.python.interpreterPath": "/usr/bin/python3",
-                "ansible.validation.lint.enabled": true,
-                "terminal.integrated.defaultProfile.linux": "bash",
-                "security.workspace.trust.enabled": true,
-                "security.workspace.trust.untrustedFolders": [],
-                "security.workspace.trust.allowedFolders": [
-                  "/home/coder/project"
-                ],
-                "chat.disableAIFeatures": true,
-                "chatgpt.openOnStartup": true
+                "codespaceConfig.proxyMarketplace": true,
+                "codespaceConfig.serviceExtensions": true
               }
             owner: vscode
             group: vscode
@@ -287,6 +260,15 @@
               && git config --global user.email "${admin_email}"
 
               ############################################################
+              # ENABLE MICROSOFT MARKETPLACE (MACHINE SETTINGS)
+              ############################################################
+              USER coder
+              WORKDIR /home/coder
+
+              RUN mkdir -p /home/coder/.local/share/code-server/Machine
+              COPY settings/machine.json /home/coder/.local/share/code-server/Machine/settings.json
+
+              ############################################################
               # INSTALL EXTENSIONS (INCLUDING COPILOT)
               ############################################################
               {% for ext in extensions %}
@@ -334,7 +316,7 @@
                     - ../extensions:/home/coder/.local/share/code-server/extensions
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../settings/machine.json:/home/coder/.local/share/code-server/Machine/settings.json
-                    - ../pem/github_pem:/home/workspace/.ssh/id_ed25519:ro
+                    - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
             mode: "0644"
