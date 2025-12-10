@@ -148,6 +148,7 @@
             owner: vscode
             group: vscode
             mode: "0644"
+
     - name: Create docker config files
       block:
         - name: Generate dockerfile
@@ -269,13 +270,6 @@
               COPY settings/machine.json /home/coder/.local/share/code-server/Machine/settings.json
 
               ############################################################
-              # INSTALL EXTENSIONS (INCLUDING COPILOT)
-              ############################################################
-              {% for ext in extensions %}
-              RUN code-server --install-extension "{{ ext }}"
-              {% endfor %}
-
-              ############################################################
               # CUSTOM FAVICONS (ALL)
               ############################################################
               #USER root
@@ -349,3 +343,22 @@
             enabled: true
             state: restarted
             daemon_reload: true
+
+    - name: Install extensions
+      block:
+        - name: List installed VS Code extensions
+          command: >
+            docker exec
+            --user coder
+            vscode
+            bash -lc "code-server --list-extensions"
+          register: installed_exts
+          changed_when: false
+        - name: Install missing VS Code extensions
+          loop: "{{ extensions }}"
+          when: item not in installed_exts.stdout_lines
+          command: >
+            docker exec
+            --user coder
+            vscode
+            bash -lc "code-server --install-extension {{ item }}"
