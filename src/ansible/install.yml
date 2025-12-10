@@ -133,22 +133,6 @@
             owner: vscode
             group: vscode
             mode: "0644"
-        - name: Generate Code machine.json
-          copy:
-            dest: "/opt/vscode/settings/machine.json" 
-            content: |
-              {
-                "extensionsGallery": {
-                  "serviceUrl": "https://marketplace.visualstudio.com/_apis/public/gallery",
-                  "cacheUrl": "https://vscode.blob.core.windows.net/gallery/index",
-                  "itemUrl": "https://marketplace.visualstudio.com/items"
-                },
-                "codespaceConfig.proxyMarketplace": true,
-                "codespaceConfig.serviceExtensions": true
-              }
-            owner: vscode
-            group: vscode
-            mode: "0644"
 
     - name: Create docker config files
       block:
@@ -226,7 +210,6 @@
                   volumes:
                     - ../data:/home/coder/project
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
-                    - ../settings/machine.json:/home/coder/.local/share/code-server/Machine/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
@@ -272,8 +255,7 @@
           register: installed_exts
           changed_when: false
         - name: Install missing VS Code extensions
-          #loop: "{{ extensions }}"
-          loop: ["hashicorp.terraform", "redhat.ansible", "ms-python.python","enkia.tokyo-night", "esbenp.prettier-vscode"]
+          loop: "{{ extensions }}"
           when: item not in installed_exts.stdout_lines
           command: >
             docker exec
