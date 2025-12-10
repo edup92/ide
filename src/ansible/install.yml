@@ -92,7 +92,7 @@
             mode: "0600"
         - name: Generate Code user.json
           copy:
-            dest: "/opt/vscode/settings/User/settings.json" 
+            dest: "/opt/vscode/settings/user.json" 
             content: |
               {
                 "editor.tabSize": 2,
@@ -135,7 +135,7 @@
             mode: "0644"
         - name: Generate Code machine.json
           copy:
-            dest: "/opt/vscode/docker/machine.json" 
+            dest: "/opt/vscode/settings/machine.json" 
             content: |
               {
                 "extensionsGallery": {
