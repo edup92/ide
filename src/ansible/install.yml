@@ -155,7 +155,7 @@
           copy:
             dest: "/opt/vscode/docker/Dockerfile"
             content: |-
-              FROM ghcr.io/coder/coder:latest
+              FROM ghcr.io/coder/code-server
 
               USER root
 
