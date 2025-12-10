@@ -77,6 +77,7 @@
             - { path: "/opt/vscode/data", mode: "0775" }
             - { path: "/opt/vscode/extensions", mode: "0775" }
             - { path: "/opt/vscode/settings", mode: "0775" }
+            - { path: "/opt/vscode/settings/User", mode: "0775" }
             - { path: "/opt/vscode/pem", mode: "0755" }
             - { path: "/opt/vscode/env", mode: "0755" }
 
@@ -91,7 +92,7 @@
             mode: "0600"
         - name: Generate Code user.json
           copy:
-            dest: "/opt/vscode/settings/user.json" 
+            dest: "/opt/vscode/settings/User/settings.json" 
             content: |
               {
                 "editor.tabSize": 2,
@@ -194,6 +195,10 @@
               && ssh-keyscan github.com >> /home/coder/.ssh/known_hosts \
               && chown -R coder:coder /home/coder/.ssh
 
+              # Copy machine settings into the image
+              RUN mkdir -p /home/coder/.local/share/code-server/Machine
+              COPY docker/machine.json /home/coder/.local/share/code-server/Machine/settings.json
+
               USER coder
 
               EXPOSE 8080
@@ -216,9 +221,7 @@
                     - "80:8080"
                   volumes:
                     - ../data:/home/coder/project
-                    - ../extensions:/home/coder/.local/share/code-server/extensions
-                    - ../settings/User:/home/coder/.local/share/code-server/User
-                    - ../docker/machine.json:/home/coder/.local/share/code-server/Machine/settings.json
+                    - ../settings/User/settings.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
