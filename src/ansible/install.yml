@@ -297,8 +297,8 @@
               services:
                 vscode:
                   build:
-                    context: .
-                    dockerfile: Dockerfile
+                    context: ..
+                    dockerfile: docker/Dockerfile
                     args:
                       admin_email: "{{ admin_email }}"
                   container_name: vscode
