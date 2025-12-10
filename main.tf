@@ -161,11 +161,15 @@ resource "google_compute_health_check" "healthcheck_main" {
   timeout_sec         = 5
   healthy_threshold   = 2
   unhealthy_threshold = 2
+
   http_health_check {
     port         = 80
-    request_path = "/"
+    request_path = "/healthz"
+    # opcionalmente podrías añadir:
+    # response = "alive"
   }
 }
+
 
 resource "google_compute_backend_service" "backend_main" {
   name                  = local.backend_main_name
