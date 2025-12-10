@@ -76,7 +76,7 @@
             - { path: "/opt/vscode/docker", mode: "0755" }
             - { path: "/opt/vscode/data", mode: "0775" }
             - { path: "/opt/vscode/extensions", mode: "0775" }
-            - { path: "/opt/vscode/settings", mode: "0755" }
+            - { path: "/opt/vscode/settings", mode: "0775" }
             - { path: "/opt/vscode/pem", mode: "0755" }
             - { path: "/opt/vscode/env", mode: "0755" }
 
@@ -134,7 +134,7 @@
             mode: "0644"
         - name: Generate Code machine.json
           copy:
-            dest: "/opt/vscode/settings/machine.json" 
+            dest: "/opt/vscode/docker/machine.json" 
             content: |
               {
                 "extensionsGallery": {
@@ -217,8 +217,8 @@
                   volumes:
                     - ../data:/home/coder/project
                     - ../extensions:/home/coder/.local/share/code-server/extensions
-                    - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
-                    - ../settings/machine.json:/home/coder/.local/share/code-server/Machine/settings.json
+                    - ../settings/User:/home/coder/.local/share/code-server/User
+                    - ../docker/machine.json:/home/coder/.local/share/code-server/Machine/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
