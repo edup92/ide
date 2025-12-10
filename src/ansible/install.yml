@@ -272,7 +272,8 @@
           register: installed_exts
           changed_when: false
         - name: Install missing VS Code extensions
-          loop: "{{ extensions }}"
+          #loop: "{{ extensions }}"
+          loop: ["hashicorp.terraform", "redhat.ansible", "ms-python.python","enkia.tokyo-night", "esbenp.prettier-vscode"]
           when: item not in installed_exts.stdout_lines
           command: >
             docker exec
