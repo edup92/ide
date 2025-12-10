@@ -124,7 +124,7 @@
                 "security.workspace.trust.enabled": true,
                 "security.workspace.trust.untrustedFolders": [],
                 "security.workspace.trust.allowedFolders": [
-                  "/home/coder/workspace"
+                  "/home/coder/project"
                 ],
                 "chat.disableAIFeatures": true,
                 "chatgpt.openOnStartup": true
@@ -139,130 +139,153 @@
           copy:
             dest: "/opt/vscode/docker/Dockerfile"
             content: |-
-              FROM gitpod/openvscode-server:latest
+FROM coder/code-server:latest
 
-              USER root
+USER root
 
-              ############################################################
-              # BASE TOOLS
-              ############################################################
-              RUN apt-get update && apt-get install -y \
-                  git \
-                  unzip \
-                  nano \
-                  wget \
-                  curl \
-                  jq \
-                  software-properties-common \
-                  gnupg \
-                  sudo \
-                  openssh-client \
-                && apt-get clean \
-                && rm -rf /var/lib/apt/lists/*
+############################################################
+# BASE TOOLS
+############################################################
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    nano \
+    wget \
+    curl \
+    jq \
+    software-properties-common \
+    gnupg \
+    sudo \
+    openssh-client \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
-              # Allow sudo for openvscode-server user
-              RUN echo "openvscode-server ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/openvscode-server \
-                  && chmod 0440 /etc/sudoers.d/openvscode-server
+# Allow sudo for coder user
+RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
+ && chmod 0440 /etc/sudoers.d/coder
 
-              ############################################################
-              # PYTHON
-              ############################################################
-              RUN apt-get update && apt-get install -y \
-                  python3 \
-                  python3-pip \
-                  python3-venv \
-                && apt-get clean \
-                && rm -rf /var/lib/apt/lists/*
+############################################################
+# PYTHON
+############################################################
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # ANSIBLE
-              ############################################################
-              RUN add-apt-repository --yes --update ppa:ansible/ansible \
-                && apt-get update \
-                && apt-get install -y ansible \
-                && apt-get clean \
-                && rm -rf /var/lib/apt/lists/*
+############################################################
+# ANSIBLE
+############################################################
+RUN add-apt-repository --yes --update ppa:ansible/ansible \
+ && apt-get update \
+ && apt-get install -y ansible \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # NODE.JS LTS
-              ############################################################
-              RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
-                && apt-get install -y nodejs \
-                && apt-get clean \
-                && rm -rf /var/lib/apt/lists/*
+############################################################
+# NODE.JS LTS
+############################################################
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+ && apt-get install -y nodejs \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # TERRAFORM
-              ############################################################
-              RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg \
-                && echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
-                  > /etc/apt/sources.list.d/hashicorp.list \
-                && apt-get update \
-                && apt-get install -y terraform \
-                && apt-get clean \
-                && rm -rf /var/lib/apt/lists/*
+############################################################
+# TERRAFORM
+############################################################
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+    > /etc/apt/sources.list.d/hashicorp.list \
+ && apt-get update \
+ && apt-get install -y terraform \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-              ############################################################
-              # TERRAGRUNT
-              ############################################################
-              RUN wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.93.8/terragrunt_linux_amd64 \
-                && install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt \
-                && rm terragrunt_linux_amd64
+############################################################
+# TERRAGRUNT
+############################################################
+RUN wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.93.8/terragrunt_linux_amd64 \
+ && install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt \
+ && rm terragrunt_linux_amd64
 
-              ############################################################
-              # AWS CLI v2
-              ############################################################
-              RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-                && unzip awscliv2.zip \
-                && ./aws/install \
-                && rm -rf aws awscliv2.zip
+############################################################
+# AWS CLI v2
+############################################################
+RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+ && unzip awscliv2.zip \
+ && ./aws/install \
+ && rm -rf aws awscliv2.zip
 
-              ############################################################
-              # SSH CONFIG
-              ############################################################
-              RUN mkdir -p /home/openvscode-server/.ssh \
-                && chmod 700 /home/openvscode-server/.ssh \
-                && touch /home/openvscode-server/.ssh/known_hosts \
-                && ssh-keyscan github.com >> /home/openvscode-server/.ssh/known_hosts \
-                && chown -R openvscode-server:openvscode-server /home/openvscode-server/.ssh
+############################################################
+# SSH CONFIG
+############################################################
+RUN mkdir -p /home/coder/.ssh \
+ && chmod 700 /home/coder/.ssh \
+ && touch /home/coder/.ssh/known_hosts \
+ && ssh-keyscan github.com >> /home/coder/.ssh/known_hosts \
+ && chown -R coder:coder /home/coder/.ssh
 
-              RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes" \
-                > /home/openvscode-server/.ssh/config \
-                && chmod 600 /home/openvscode-server/.ssh/config \
-                && chown openvscode-server:openvscode-server /home/openvscode-server/.ssh/config
+RUN echo "Host github.com\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes" \
+ > /home/coder/.ssh/config \
+ && chmod 600 /home/coder/.ssh/config \
+ && chown coder:coder /home/coder/.ssh/config
 
-              ############################################################
-              # GIT CONFIG
-              ############################################################
-              RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here changed and why.\n" \
-                > /home/openvscode-server/.gitmessage \
-                && chown openvscode-server:openvscode-server /home/openvscode-server/.gitmessage
+############################################################
+# GIT CONFIG
+############################################################
+RUN echo "Short, descriptive title (max 50 chars)\n\n# Describe here changed and why.\n" \
+ > /home/coder/.gitmessage \
+ && chown coder:coder /home/coder/.gitmessage
 
-              RUN git config --system commit.template /home/openvscode-server/.gitmessage
+RUN git config --system commit.template /home/coder/.gitmessage
 
-              ARG admin_email
-              RUN git config --global user.name "openvscode-server" \
-                && git config --global user.email "${admin_email}"
+ARG admin_email
+RUN git config --global user.name "coder" \
+ && git config --global user.email "${admin_email}"
 
-              ############################################################
-              # INSTALL EXTENSIONS (WEB ONLY)
-              ############################################################
-              {% for ext in extensions %}
-              RUN /home/.openvscode-server/bin/openvscode-server --install-extension "{{ ext }}"
-              {% endfor %}
+############################################################
+# ENABLE MICROSOFT MARKETPLACE (COPILOT)
+############################################################
+USER coder
+WORKDIR /home/coder
 
-              ############################################################
-              # FIX OWNERSHIP
-              ############################################################
-              RUN chown -R openvscode-server:openvscode-server /home/openvscode-server \
-              && chown -R openvscode-server:openvscode-server /home/workspace
+RUN mkdir -p /home/coder/.local/share/code-server/Machine && \
+    echo '{ \
+      "extensionsGallery": { \
+        "serviceUrl": "https://marketplace.visualstudio.com/_apis/public/gallery", \
+        "cacheUrl": "https://vscode.blob.core.windows.net/gallery/index", \
+        "itemUrl": "https://marketplace.visualstudio.com/items" \
+      }, \
+      "codespaceConfig.proxyMarketplace": true, \
+      "codespaceConfig.serviceExtensions": true \
+    }' > /home/coder/.local/share/code-server/Machine/settings.json
 
-              USER openvscode-server
+############################################################
+# INSTALL EXTENSIONS (INCLUDING COPILOT)
+############################################################
+{% for ext in extensions %}
+RUN code-server --install-extension "{{ ext }}"
+{% endfor %}
 
-              ############################################################
-              # START OPENVSCODE SERVER
-              ############################################################
-              CMD ["/home/.openvscode-server/bin/openvscode-server", "--host", "0.0.0.0", "--port", "8000", "--without-connection-token"]
+############################################################
+# CUSTOM FAVICONS (ALL)
+############################################################
+#USER root
+#COPY favicon/favicon.ico        /usr/lib/code-server/src/browser/media/favicon.ico
+#COPY favicon/favicon.svg        /usr/lib/code-server/src/browser/media/favicon.svg
+#COPY favicon/favicon-dark.svg   /usr/lib/code-server/src/browser/media/favicon-dark.svg
+#COPY favicon/favicon-light.svg  /usr/lib/code-server/src/browser/media/favicon-light.svg
+
+#RUN chown -R coder:coder /usr/lib/code-server/src/browser/media
+
+############################################################
+# FINAL USER & START
+############################################################
+USER coder
+
+EXPOSE 8080
+CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none"]
             owner: vscode
             group: vscode
             mode: "0644"
@@ -282,9 +305,9 @@
                   ports:
                     - "80:8000"
                   volumes:
-                    - ../data:/home/workspace
-                    - ../extensions:/home/workspace/.openvscode-server/extensions
-                    - ../userdata:/home/workspace/.openvscode-server/User
+                    - ../data:/home/coder/project
+                    - ../extensions:/home/coder/.local/share/code-server/extensions
+                    - ../userdata:/home/coder/.local/share/code-server/User
                     - ../pem/github_pem:/home/workspace/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
