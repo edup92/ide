@@ -195,9 +195,13 @@
               && ssh-keyscan github.com >> /home/coder/.ssh/known_hosts \
               && chown -R coder:coder /home/coder/.ssh
 
-              # Copy machine settings into the image
-              RUN mkdir -p /home/coder/.local/share/code-server/Machine
-              COPY docker/machine.json /home/coder/.local/share/code-server/Machine/settings.json
+              # Ensure permissions
+              RUN mkdir -p \
+                    /home/coder/.local/share/code-server/extensions \
+                    /home/coder/.local/share/code-server/User \
+                    /home/coder/.local/share/code-server/logs \
+                    /home/coder/.local/share/code-server/Machine \
+                  && chown -R coder:coder /home/coder/.local
 
               USER coder
 
