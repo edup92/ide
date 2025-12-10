@@ -225,7 +225,8 @@
                     - "80:8080"
                   volumes:
                     - ../data:/home/coder/project
-                    - ../settings/User/settings.json:/home/coder/.local/share/code-server/User/settings.json
+                    - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
+                    - ../settings/machine.json:/home/coder/.local/share/code-server/Machine/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
             group: vscode
