@@ -64,6 +64,18 @@
             append: yes
             state: present
           register: vscode_user
+        - name: Read passwd entry for vscode
+          ansible.builtin.getent:
+            database: passwd
+            key: vscode
+        - name: Read group entry for vscode
+          ansible.builtin.getent:
+            database: group
+            key: vscode
+        - name: Set UID/GID facts from getent
+          ansible.builtin.set_fact:
+            vscode_uid: "{{ getent_passwd['vscode'][1] }}"
+            vscode_gid: "{{ getent_passwd['vscode'][2] }}"
         - name: Create Code directories
           file:
             path: "{{ item.path }}"
@@ -204,6 +216,7 @@
                     context: ..
                     dockerfile: docker/Dockerfile
                   container_name: vscode
+                  user: "{{ vscode_uid }}:{{ vscode_gid }}"
                   restart: always
                   ports:
                     - "80:8080"
