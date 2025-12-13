@@ -151,7 +151,13 @@
                 "ansible.python.interpreterPath": "/usr/bin/python3",
                 "ansible.validation.lint.enabled": true,
                 "terminal.integrated.defaultProfile.linux": "bash",
-                "security.workspace.trust.enabled": false
+                "security.workspace.trust.enabled": false,
+                "github.copilot.enable": {
+                  "*": false,
+                  "plaintext": false,
+                  "markdown": false,
+                  "scminput": false
+                }
               }
             owner: vscode
             group: vscode

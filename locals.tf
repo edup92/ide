@@ -1,7 +1,7 @@
 locals {
   # Instances
   instance_main_name = "${var.project_name}-instance-main"
-  instance_type      = "e2-small"
+  instance_type      = "e2-medium"
   instance_os        = "projects/ubuntu-os-cloud/global/images/ubuntu-minimal-2204-jammy-v20251204"
   disk_main_name     = "${var.project_name}-disk-main"
   disk_type          = "pd-balanced"
