@@ -141,6 +141,12 @@
             owner: vscode
             group: vscode
             mode: "0644"
+        - name: Define EXTENSIONS_GALLERY JSON (Ansible var)
+          set_fact:
+            extensions_gallery_json: >-
+              {"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery",
+              "cacheUrl":"https://vscode.blob.core.windows.net/gallery/index",
+              "itemUrl":"https://marketplace.visualstudio.com/items"}
 
     - name: Create docker config files
       block:
@@ -151,6 +157,8 @@
               FROM ghcr.io/coder/code-server:latest
 
               USER root
+
+              # Packages
 
               RUN apt-get update && apt-get install -y \
                 git unzip nano wget curl jq sudo gnupg software-properties-common \
@@ -182,6 +190,8 @@
               RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
               && chmod 0440 /etc/sudoers.d/coder
 
+              # SSH
+
               RUN mkdir -p /home/coder/.ssh \
               && chmod 700 /home/coder/.ssh \
               && ssh-keyscan github.com >> /home/coder/.ssh/known_hosts \
@@ -196,6 +206,13 @@
                   && chown -R coder:coder /home/coder/.local
 
               USER coder
+
+              # SET EXTENSIONS_GALLERY
+
+              ARG EXTENSIONS_GALLERY
+              ENV EXTENSIONS_GALLERY="${EXTENSIONS_GALLERY}"
+
+              # Extensions
 
               {% for ext in extensions %}
                 code-server --install-extension {{ ext }};
@@ -215,6 +232,8 @@
                   build:
                     context: ..
                     dockerfile: docker/Dockerfile
+                    args:
+                      EXTENSIONS_GALLERY: '{{ extensions_gallery_json }}'
                   container_name: vscode
                   user: "{{ vscode_uid }}:{{ vscode_gid }}"
                   restart: always
@@ -225,10 +244,7 @@
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
                   environment:
-                    EXTENSIONS_GALLERY: >-
-                      {"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery",
-                      "cacheUrl":"https://vscode.blob.core.windows.net/gallery/index",
-                      "itemUrl":"https://marketplace.visualstudio.com/items"}
+                    EXTENSIONS_GALLERY: '{{ extensions_gallery_json }}'
             owner: vscode
             group: vscode
             mode: "0644"
