@@ -22,24 +22,19 @@ resource "google_secret_manager_secret_version" "secretversion_pem_ssh" {
 
 # Instance
 
-resource "google_compute_instance" "instance_main" {
-  name         = local.instance_main_name
-  project      = var.gcloud_project_id
+resource "google_compute_instance_template" "instance_main" {
+  name_prefix = local.instance_main_name
+  project     = var.gcloud_project_id
   machine_type = local.instance_type
-  zone          = data.google_compute_zones.available.names[0]
-  metadata = {
-    enable-osconfig = "TRUE"
-    ssh-keys = "${local.ansible_user}:${tls_private_key.pem_ssh.public_key_openssh}"
-  }
-  allow_stopping_for_update = true
-  boot_disk {
-    auto_delete = true
-    device_name = local.disk_main_name
-    initialize_params {
-      image = local.instance_os
-      type  = local.disk_type
-      size  = local.disk_size
-    }
+  disk {
+    auto_delete  = true
+    boot         = true
+    source_image = local.instance_os
+    disk_type    = local.disk_type
+    disk_size_gb = local.disk_size
+    resource_policies = [
+      google_compute_resource_policy.snapshot_policy.self_link
+    ]
   }
   network_interface {
     network = "default"
@@ -48,25 +43,39 @@ resource "google_compute_instance" "instance_main" {
     }
     stack_type = "IPV4_ONLY"
   }
+  metadata = {
+    enable-osconfig = "TRUE"
+    ssh-keys = "${local.ansible_user}:${tls_private_key.pem_ssh.public_key_openssh}"
+  }
   service_account {
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+  }
+  scheduling {
+    provisioning_model          = "SPOT"
+    preemptible                 = true
+    instance_termination_action = "STOP"
   }
   shielded_instance_config {
     enable_secure_boot          = false
     enable_vtpm                 = true
     enable_integrity_monitoring = true
   }
-  scheduling {
-    provisioning_model = "STANDARD"
-    on_host_maintenance = "MIGRATE"
-  }
-  labels = {
-    goog-ec-src = "vm_add-gcloud"
-  }
-  reservation_affinity {
-    type = "NO_RESERVATION"
-  }
   tags = [local.instance_main_name]
+}
+
+resource "google_compute_instance_group_manager" "instancegroup_main" {
+  name    = "${var.project_name}-mig-main"
+  project = var.gcloud_project_id
+  zone    = data.google_compute_zones.available.names[0]
+  base_instance_name = local.instance_main_nameinstancegroup_main_name
+  target_size        = 1
+  version {
+    instance_template = google_compute_instance_template.instancegroup_main.self_link
+  }
+  auto_healing_policies {
+    health_check      = google_compute_health_check.healthcheck_main.self_link
+    initial_delay_sec = 60
+  }
 }
 
 # Snapshot
@@ -86,16 +95,6 @@ resource "google_compute_resource_policy" "snapshot_policy" {
       on_source_disk_delete = "KEEP_AUTO_SNAPSHOTS"
     }
   }
-}
-
-resource "google_compute_disk_resource_policy_attachment" "disk_policy_attachment" {
-  name    = google_compute_resource_policy.snapshot_policy.name
-  disk    = google_compute_instance.instance_main.name  # <-- aquí el cambio
-  zone    = google_compute_instance.instance_main.zone
-  project = var.gcloud_project_id
-  depends_on = [
-    google_compute_instance.instance_main
-  ]
 }
 
 # Firewall
@@ -145,16 +144,6 @@ resource "google_compute_firewall" "fw_tempssh" {
 
 # LB
 
-resource "google_compute_instance_group" "instancegroup_main" {
-  name        = local.instancegroup_main_name
-  zone    = data.google_compute_zones.available.names[0]
-  instances = [google_compute_instance.instance_main.self_link]
-  named_port {
-    name = "http"
-    port = 80
-  }
-}
-
 resource "google_compute_health_check" "healthcheck_main" {
   name                = local.healthcheck_main_name
   check_interval_sec  = 5
@@ -179,7 +168,7 @@ resource "google_compute_backend_service" "backend_main" {
   health_checks         = [google_compute_health_check.healthcheck_main.self_link]
   connection_draining_timeout_sec = 10
   backend {
-    group = google_compute_instance_group.instancegroup_main.self_link
+    group = google_compute_instance_group_manager.instancegroup_main.instance_group
   }
   lifecycle {
     ignore_changes = [iap]         # <- clave para no deshabilitarlo
@@ -233,7 +222,7 @@ resource "null_resource" "null_ansible_install" {
   provisioner "local-exec" {
     environment = {
       PROJECT_ID    = var.gcloud_project_id
-      INSTANCE_IP    = google_compute_instance.instance_main.network_interface[0].access_config[0].nat_ip
+      INSTANCE_IP    = google_compute_instance_group_manager.instancegroup_main.instances[0].instance
       INSTANCE_USER  = local.ansible_user
       INSTANCE_SSH_KEY = nonsensitive(tls_private_key.pem_ssh.private_key_pem)
       FW_TEMPSSH_NAME  = google_compute_firewall.fw_tempssh.name
