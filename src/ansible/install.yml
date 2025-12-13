@@ -90,7 +90,6 @@
             - { path: "/opt/vscode/settings", mode: "0775" }
             - { path: "/opt/vscode/pem", mode: "0755" }
             - { path: "/opt/vscode/env", mode: "0755" }
-            - { path: "/opt/vscode/branding", mode: "0755" }
 
     - name: Vscode config
       block:
@@ -107,13 +106,6 @@
             owner: vscode
             group: vscode
             mode: "0600"
-        - name: Copy custom favicon.ico into build context
-          ansible.builtin.copy:
-            src: files/favicon.ico
-            dest: /opt/vscode/docker/branding/favicon.ico
-            owner: vscode
-            group: vscode
-            mode: "0644"
         - name: Generate Code user.json
           copy:
             dest: "/opt/vscode/settings/user.json" 
