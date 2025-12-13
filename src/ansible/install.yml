@@ -115,7 +115,7 @@
         - name: Copy GitHub private key from local file
           copy:
             dest: /opt/vscode/pem/github_pem
-            content: "{{ pem_github_base64 }}"
+            content: "{{ pem_github_base64 | b64decode }}"
             owner: vscode
             group: vscode
             mode: "0600"
