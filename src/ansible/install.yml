@@ -285,6 +285,8 @@
                     - "80:8080"
                   volumes:
                     - ../data:/home/coder/project
+                    - /tmp/favicon.ico:/usr/lib/code-server/src/browser/media/favicon.ico:ro
+                    - /tmp/favicon-dark-support.svg:/usr/lib/code-server/src/browser/media/favicon-dark-support.svg:ro
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
