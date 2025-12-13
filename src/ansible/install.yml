@@ -136,7 +136,7 @@
                 "security.workspace.trust.untrustedFolders": [],
                 "security.workspace.trust.allowedFolders": [
                   "/home/coder/project"
-                ],
+                ]
               }
             owner: vscode
             group: vscode
@@ -214,9 +214,11 @@
 
               # Extensions
 
+              RUN \
               {% for ext in extensions %}
-                code-server --install-extension {{ ext }};
+                code-server --install-extension "{{ ext }}"; \
               {% endfor %}
+                true
                 
               EXPOSE 8080
               CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none"]
