@@ -23,6 +23,9 @@
   "pem_github": "MULTILINE PRIVATE PEM"
 }`
 
+- NOTES:
+  - If extensions_open is empty, default will be installed: ["hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"]
+  - To installed licensed extensions upload it to src/extensions_licensed and add to array extensions_licensed the name of the file/s
 - Run Github Actions
 - Go to https://console.cloud.google.com/security/iap?tab=applications&hl=es-419&project=MYPROJECT and enable IAP
 - Click in the same window on the created backend, click on add principal, on principal write authorized email (x@gmail.com) and add the role "roles/iap.httpsResourceAccessor"
