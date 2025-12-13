@@ -33,8 +33,7 @@ jobs:
             (.dns_record          | type=="string") and
             (.admin_name          | type=="string") and
             (.admin_email         | type=="string") and
-            (.extensions_licensed | type=="array") and
-            (.extensions_open     | type=="array") and
+            (.extensions          | type=="array") and
             (.pem_github          | type=="string")
           ' <<<"$VARS" >/dev/null || { echo "Error: VARS_JSON schema invalid"; exit 1; }
           echo "VARS_JSON schema valid"

@@ -196,6 +196,10 @@
                   && chown -R coder:coder /home/coder/.local
 
               USER coder
+
+              {% for ext in extensions %}
+                code-server --install-extension {{ ext }};
+              {% endfor %}
                 
               EXPOSE 8080
               CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none"]
