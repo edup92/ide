@@ -11,7 +11,6 @@ locals {
   snapshot_main_name = "${var.project_name}-snapshot-main"
 
   # LB
-  instancegroup_main_name = "${var.project_name}-instancegroup-main"
   healthcheck_main_name = "${var.project_name}-healthcheck-main"
   backend_main_name = "${var.project_name}-backend-main"
   urlmap_main_name = "${var.project_name}-urlmap-main"
