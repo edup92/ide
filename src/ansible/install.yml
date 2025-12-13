@@ -72,10 +72,10 @@
           ansible.builtin.getent:
             database: group
             key: vscode
-        - name: Set UID/GID facts from getent
+        - name: Set UID/GID facts from getent (future-proof)
           ansible.builtin.set_fact:
-            vscode_uid: "{{ getent_passwd['vscode'][1] }}"
-            vscode_gid: "{{ getent_passwd['vscode'][2] }}"
+            vscode_uid: "{{ ansible_facts.getent_passwd['vscode'][1] | int }}"
+            vscode_gid: "{{ ansible_facts.getent_passwd['vscode'][2] | int }}"
         - name: Create Code directories
           file:
             path: "{{ item.path }}"
