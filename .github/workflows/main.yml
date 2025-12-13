@@ -34,7 +34,7 @@ jobs:
             (.admin_name          | type=="string") and
             (.admin_email         | type=="string") and
             (.extensions          | type=="array") and
-            (.pem_github          | type=="string")
+            (.pem_github_base64   | type=="string")
           ' <<<"$VARS" >/dev/null || { echo "Error: VARS_JSON schema invalid"; exit 1; }
           echo "VARS_JSON schema valid"
 

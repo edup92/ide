@@ -19,7 +19,7 @@
   "admin_name": "",
   "admin_email": "",
   "extensions": [],
-  "pem_github": "MULTILINE PRIVATE PEM"
+  "pem_github_base64": "BASE64 ENCODED PRIVATE PEM"
 }`
 
 - Go to https://console.cloud.google.com/security/iap?tab=applications&hl=es-419&project=MYPROJECT and enable IAP

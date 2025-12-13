@@ -37,6 +37,6 @@ locals {
     admin_name          = var.admin_name
     admin_email         = var.admin_email
     extensions          = var.extensions
-    pem_github          = var.pem_github
+    pem_github_base64   = var.pem_github_base64
   })
 }

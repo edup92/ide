@@ -35,7 +35,7 @@ variable "extensions" {
   default     = ["github.copilot", "gitHub.copilot-chat", "hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"]
 }
 
-variable "pem_github" {
+variable "pem_github_base64" {
   description = "Github private pem key"
   type        = string
 }
