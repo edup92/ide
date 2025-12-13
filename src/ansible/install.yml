@@ -202,12 +202,14 @@
               USER coder
 
               # Install VS Code extensions at build time (inline)
-              RUN set -euo pipefail; \
+              RUN EXT_DIR="/home/coder/.local/share/code-server/extensions"; \
+                if [ ! -d "$EXT_DIR" ] || [ -z "$(ls -A "$EXT_DIR" 2>/dev/null)" ]; then \
+                  echo "Installing VSCode extensions..."; \
               {% for ext in extensions_open %}
-                code-server --install-extension {{ ext }}; \
+                  code-server --install-extension {{ ext }}; \
               {% endfor %}
-                true
-
+                fi
+                
               EXPOSE 8080
               CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none"]
             owner: vscode
