@@ -90,9 +90,16 @@
             - { path: "/opt/vscode/settings", mode: "0775" }
             - { path: "/opt/vscode/pem", mode: "0755" }
             - { path: "/opt/vscode/env", mode: "0755" }
+            - { path: "/opt/vscode/branding", mode: "0755" }
 
     - name: Vscode config
       block:
+        - name: Define branding assets (base64)
+          ansible.builtin.set_fact:
+            favicon_ico_b64: |
+              AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAACMuAAAjLgAAAAAAAAAAAAD////////////////u7Oz/qKKf/2RYVP9CNC//OSol/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP85KiX/QjQv/2RYVP+ooZ//7ezs////////////////////////////1NHQ/2xhXf87LCf/Nici/zgoI/84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KCP/Nici/zssJ/9sYF3/1NHQ/////////////////9TR0P9WSUX/NSYh/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/Nygk/zcoJP84KST/OCkk/zgpJP84KST/OCkk/zUmIf9WSUX/1NHQ///////u7Oz/a2Bd/zUmIf84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP9QOif/SDUm/zYoJP83KCT/OCkk/zgpJP84KST/OCkk/zUmIf9rYF3/7uzs/6ihn/87LCf/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/bk0k/7uBKf+3gzT/flsv/0k1J/82KCT/Nygk/zgpJP84KST/OCkk/zssJ/+ooZ//ZFhU/zYnIv84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP83KST/Oiok/3dSJP/ChCT/y4ol/9KVNv/UmTz/uoY4/4BdL/9KNif/Nygk/zcpJP84KST/Nici/2RYVP9CNC//Nygj/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/Nygk/z0s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CP+iaQ3/YkMd/6t7Nf/Wmzz/1Jk8/9SZPP/UmTz/0pc8/2hLK/81JyT/OCkk/zgpJP84KST/OCkk/zgpJP83KST/Pi0k/4JaJP+9gST/jWEk/0YyJP82KCT/OCkk/zgpJP83KCT/QS8i/4ZYE/+4dgj/uXcI/7l3CP+5dwj/uXcI/7p4CP+xcwv/xIsw/9WaPf/UmTz/1Jk8/9SZPP/Slzz/aEsr/zUnJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP83KST/Oysk/1A5JP88LCT/Nygk/zgpJP84KST/OCkk/zgpJP83KCT/Pi0j/35UFf+2dQn/uncI/7l3CP+5dwj/uXcI/7p4Cf/NkC7/1Jo9/9SZPP/UmTz/1Jk8/9KXPP9oSyv/NSck/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/Nygk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP83KST/Oysj/3ZPF/+0dAn/ungI/7l3CP+5dwj/ungJ/82QLv/Umj3/1Jk8/9SZPP/UmTz/0pg8/2lMK/81JyT/OCkk/zgpJP85KiX/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP83KST/Oioj/25KGP+xcgr/ungI/7l3CP+6eAn/zZAu/9SaPf/UmTz/1Jk8/9ebPP/JkTr/XUMq/zYoJP84KST/OSol/0I0L/83KCP/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/2ZFGv+tcAv/ungI/7p4Cf/NkC7/1Zo9/9abPP/NlDv/pHc1/2ZKK/87KyT/OCkk/zcoI/9CNC//ZFhU/zYnIv84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/Nykk/15AHP+pbQv/vHkJ/8+SL//Mkzv/oHQ0/2NIK/89LSX/Nick/zgpJP84KST/Nici/2RYVP+noZ//Oywn/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/Nygk/1c8Hf+ZZxr/mGwu/2BFKv88LCX/Nick/zgpJP84KST/OCkk/zgpJP87LCf/qKGf/+7s7P9rYFz/NSYh/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/Nykk/z0tJf86KyX/Nick/zgpJP84KST/OCkk/zgpJP84KST/NSYh/2tgXP/u7Oz//////9TR0P9WSUX/NSYg/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zUmIP9WSUX/1NHQ/////////////////9TR0P9sYF3/Oywn/zYnIv84KCP/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCgj/zYnIv87LCf/a2Bd/9TR0P///////////////////////////+7s7P+ooZ//ZFhU/0I0L/85KiX/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zgpJP84KST/OCkk/zkqJf9CNC//ZFhU/6ihn//t7Oz/////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+            favicon_svg_b64: |
+              PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PGcgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIGZpbGw9IiMyNDI5MzgiIHJ4PSI2MCIvPjxwYXRoIGZpbGw9IiMyNDg5Q0EiIGQ9Ik0zMy43MTYgMTAwLjIwOHMtNC43MzUtMy40MTMuOTQ3LTcuOTdsMTMuMjM2LTExLjgzNnMzLjc4OC0zLjk4NSA3Ljc5Mi0uNTEzbDEyMi4xNDkgOTIuNDc5djQ0LjM0NnMtLjA1OSA2Ljk2NC04Ljk5NiA2LjE5NGwtMTM1LjEyOC0xMjIuN1oiLz48cGF0aCBmaWxsPSIjMTA3MEIzIiBkPSJtNjUuMiAxMjguNzkybC0zMS40ODQgMjguNjIzcy0zLjIzNiAyLjQwNyAwIDYuNzA4bDE0LjYxNyAxMy4yOTVzMy40NzIgMy43MjkgOC42MDEtLjUxM2wzMy4zNzgtMjUuMzA5TDY1LjIgMTI4Ljc5MloiLz48cGF0aCBmaWxsPSIjMDg3N0I5IiBkPSJtMTIwLjQ3NCAxMjkuMDI5bDU3Ljc0MS00NC4wOWwtLjM3NS00NC4xMDlzLTIuNDY2LTkuNjI3LTEwLjY5Mi00LjYxNmwtNzYuODM2IDY5LjkzMWwzMC4xNjIgMjIuODg0WiIvPjxwYXRoIGZpbGw9IiMzQzk5RDQiIGQ9Ik0xNjguODQ0IDIyMi45NjhjMy4zNTQgMy40MzIgNy40MTggMi4zMDggNy40MTggMi4zMDhsNDQuOTk3LTIyLjE3M2M1Ljc2LTMuOTI2IDQuOTUxLTguNzk4IDQuOTUxLTguNzk4VjYxLjg5OGMwLTUuODItNS45NTgtNy44MzEtNS45NTgtNy44MzFsLTM4Ljk5OS0xOC44Yy04LjUyMi01LjI2Ny0xNC4xMDUuOTQ3LTE0LjEwNS45NDdzNy4xOC01LjE2OCAxMC42OTIgNC42MTZ2MTc1LjA3NWE3Ljk3NCA3Ljk3NCAwIDAgMS0uNzY5IDMuNDUzYy0xLjAyNiAyLjA3MS0zLjI1NSA0LjAwNC04LjYwMSAzLjE5NWwuMzc0LjQxNVoiLz48L2c+PC9zdmc+     
         - name: Copy GitHub private key from local file
           copy:
             dest: /opt/vscode/pem/github_pem
@@ -100,6 +107,13 @@
             owner: vscode
             group: vscode
             mode: "0600"
+        - name: Copy custom favicon.ico into build context
+          ansible.builtin.copy:
+            src: files/favicon.ico
+            dest: /opt/vscode/docker/branding/favicon.ico
+            owner: vscode
+            group: vscode
+            mode: "0644"
         - name: Generate Code user.json
           copy:
             dest: "/opt/vscode/settings/user.json" 
@@ -134,9 +148,7 @@
                 "terminal.integrated.defaultProfile.linux": "bash",
                 "security.workspace.trust.enabled": true,
                 "security.workspace.trust.untrustedFolders": [],
-                "security.workspace.trust.allowedFolders": [
-                  "/home/coder/project"
-                ]
+                "security.workspace.trust.startupPrompt": "never"
               }
             owner: vscode
             group: vscode
@@ -189,6 +201,21 @@
 
               RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
               && chmod 0440 /etc/sudoers.d/coder
+
+              # branding
+
+              RUN printf '%s' '{{ favicon_ico_b64 | regex_replace("\n","") }}' | base64 -d > /tmp/favicon.ico \
+              && printf '%s' '{{ favicon_svg_b64 | regex_replace("\n","") }}' | base64 -d > /tmp/favicon-dark-support.svg \
+              && for d in \
+                    /usr/lib/code-server/src/browser/media \
+                    /usr/lib/code-server/lib/vscode/src/browser/media \
+                    /usr/lib/code-server/lib/vscode/out/vs/code/browser/media \
+                  ; do \
+                    if [ -d "$d" ]; then \
+                      cp /tmp/favicon.ico "$d/favicon.ico"; \
+                      cp /tmp/favicon-dark-support.svg "$d/favicon-dark-support.svg"; \
+                    fi; \
+                  done
 
               # Git identity (system-wide)
               RUN git config --system user.name "{{ admin_name }}" \
