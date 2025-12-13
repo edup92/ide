@@ -1,6 +1,7 @@
 # IDE
 
 ## Code (with microsoft extensions enabled) selfhosted in docker containers, with Google SSO Auth, Hosted in Google cloud
+### Instance is preementible
 
 - By default installs extensions: "github.copilot", "gitHub.copilot-chat", "hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"
 
