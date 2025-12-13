@@ -67,10 +67,10 @@ resource "google_compute_instance_group_manager" "instancegroup_main" {
   name    = "${var.project_name}-mig-main"
   project = var.gcloud_project_id
   zone    = data.google_compute_zones.available.names[0]
-  base_instance_name = local.instance_main_nameinstancegroup_main_name
+  base_instance_name = local.instance_main_name
   target_size        = 1
   version {
-    instance_template = google_compute_instance_template.instancegroup_main.self_link
+    instance_template = google_compute_instance_template.instance_main.self_link
   }
   auto_healing_policies {
     health_check      = google_compute_health_check.healthcheck_main.self_link
@@ -211,18 +211,18 @@ resource "google_compute_global_forwarding_rule" "fr_main" {
 resource "null_resource" "null_ansible_install" {
   depends_on = [
     tls_private_key.pem_ssh,
-    google_compute_instance.instance_main,
+    google_compute_instance_group_manager.instancegroup_main,
     google_compute_firewall.fw_tempssh,
   ]
   triggers = {
-    instance_id   = google_compute_instance.instance_main.id
+    instance_id   = google_compute_instance_group_manager.instancegroup_main.id
     playbook_hash = filesha256(local.ansible_path)
     vars_json = local.ansible_vars
   }
   provisioner "local-exec" {
     environment = {
       PROJECT_ID    = var.gcloud_project_id
-      INSTANCE_IP    = google_compute_instance_group_manager.instancegroup_main.instances[0].instance
+      INSTANCE_IP    = data.google_compute_instance.mig_instance.network_interface[0].access_config[0].nat_ip
       INSTANCE_USER  = local.ansible_user
       INSTANCE_SSH_KEY = nonsensitive(tls_private_key.pem_ssh.private_key_pem)
       FW_TEMPSSH_NAME  = google_compute_firewall.fw_tempssh.name
