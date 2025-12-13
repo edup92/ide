@@ -203,7 +203,7 @@
 
               # Install VS Code extensions at build time (inline)
               RUN set -euo pipefail; \
-              {% for ext in extensions %}
+              {% for ext in extensions_open %}
                 code-server --install-extension {{ ext }}; \
               {% endfor %}
                 true

@@ -36,7 +36,8 @@ locals {
     dns_record          = var.dns_record
     admin_name          = var.admin_name
     admin_email         = var.admin_email
-    extensions          = var.extensions
+    extensions_licensed = var.extensions_licensed
+    extensions_open     = var.extensions_open
     pem_github          = var.pem_github
   })
 }

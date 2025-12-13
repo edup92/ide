@@ -18,7 +18,8 @@
   "dns_record": "x.mydomain.tld",
   "admin_name": "",
   "admin_email": "",
-  "extensions_url": [],
+  "extensions_licensed": [],
+  "extensions_open": [],
   "pem_github": "MULTILINE PRIVATE PEM"
 }`
 

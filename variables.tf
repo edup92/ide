@@ -29,10 +29,15 @@ variable "admin_email" {
   type        = string
 }
 
-variable "extensions" {
+variable "extensions_licensed" {
   description = "Github private pem key"
   type        = list(string)
-  default     = ["github.copilot", "hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"]
+}
+
+variable "extensions_open" {
+  description = "Github private pem key"
+  type        = list(string)
+  default     = ["hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"]
 }
 
 variable "pem_github" {
