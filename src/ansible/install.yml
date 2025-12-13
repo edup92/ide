@@ -196,9 +196,15 @@
 
               # branding
 
-              RUN printf '%s' '{{ favicon_ico_b64 | regex_replace("\n","") }}' | base64 -d > /tmp/favicon.ico \
-              && printf '%s' '{{ favicon_svg_b64 | regex_replace("\n","") }}' | base64 -d > /tmp/favicon-dark-support.svg \
-              && for d in \
+              RUN base64 -d > /tmp/favicon.ico <<'B64'
+              {{ favicon_ico_b64 | regex_replace('\r','') | trim }}
+              B64
+
+              RUN base64 -d > /tmp/favicon-dark-support.svg <<'B64'
+              {{ favicon_svg_b64 | regex_replace('\r','') | trim }}
+              B64
+
+              RUN for d in \
                     /usr/lib/code-server/src/browser/media \
                     /usr/lib/code-server/lib/vscode/src/browser/media \
                     /usr/lib/code-server/lib/vscode/out/vs/code/browser/media \
