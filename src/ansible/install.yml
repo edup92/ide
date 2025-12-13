@@ -87,9 +87,7 @@
             - { path: "/opt/vscode", mode: "0700" }
             - { path: "/opt/vscode/docker", mode: "0755" }
             - { path: "/opt/vscode/data", mode: "0775" }
-            - { path: "/opt/vscode/extensions", mode: "0775" }
             - { path: "/opt/vscode/settings", mode: "0775" }
-            - { path: "/opt/vscode/settings/User", mode: "0775" }
             - { path: "/opt/vscode/pem", mode: "0755" }
             - { path: "/opt/vscode/env", mode: "0755" }
 
@@ -198,15 +196,6 @@
                   && chown -R coder:coder /home/coder/.local
 
               USER coder
-
-              # Install VS Code extensions at build time (inline)
-              RUN EXT_DIR="/home/coder/.local/share/code-server/extensions"; \
-                if [ ! -d "$EXT_DIR" ] || [ -z "$(ls -A "$EXT_DIR" 2>/dev/null)" ]; then \
-                  echo "Installing VSCode extensions..."; \
-              {% for ext in extensions %}
-                  code-server --install-extension {{ ext }}; \
-              {% endfor %}
-                fi
                 
               EXPOSE 8080
               CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none"]
@@ -229,7 +218,6 @@
                     - "80:8080"
                   volumes:
                     - ../data:/home/coder/project
-                    - ../extensions:/home/coder/.local/share/code-server/extensions
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
                   environment:
