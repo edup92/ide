@@ -190,12 +190,31 @@
               RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
               && chmod 0440 /etc/sudoers.d/coder
 
-              # SSH
+              # Git identity (system-wide)
+              RUN git config --system user.name "{{ admin_name }}" \
+              && git config --system user.email "{{ admin_email }}"
 
-              RUN mkdir -p /home/coder/.ssh \
-              && chmod 700 /home/coder/.ssh \
-              && ssh-keyscan github.com >> /home/coder/.ssh/known_hosts \
-              && chown -R coder:coder /home/coder/.ssh
+              # Git commit template (system-wide)
+              RUN printf "Describe the change in one sentence:\n" > /etc/gitmessage \
+              && git config --system commit.template /etc/gitmessage
+
+              # SSH (system-wide config + known_hosts)
+
+              RUN mkdir -p /etc/ssh/ssh_config.d \
+                && ssh-keyscan github.com > /etc/ssh/ssh_known_hosts \
+                && chmod 0644 /etc/ssh/ssh_known_hosts \
+                && cat > /etc/ssh/ssh_config.d/github.conf <<'EOF'
+              Host github.com
+                HostName github.com
+                User git
+                IdentityFile /home/coder/.ssh/id_ed25519
+                IdentitiesOnly yes
+                StrictHostKeyChecking accept-new
+                UserKnownHostsFile /etc/ssh/ssh_known_hosts
+              EOF
+                && chmod 0644 /etc/ssh/ssh_config.d/github.conf \
+                && mkdir -p /home/coder/.ssh \
+                && chmod 0755 /home/coder/.ssh
 
               # Ensure permissions
               RUN mkdir -p \
@@ -209,8 +228,7 @@
 
               # SET EXTENSIONS_GALLERY
 
-              ARG EXTENSIONS_GALLERY
-              ENV EXTENSIONS_GALLERY="${EXTENSIONS_GALLERY}"
+              ENV EXTENSIONS_GALLERY='{{ extensions_gallery_json }}'
 
               # Extensions
 
@@ -234,8 +252,6 @@
                   build:
                     context: ..
                     dockerfile: docker/Dockerfile
-                    args:
-                      EXTENSIONS_GALLERY: '{{ extensions_gallery_json }}'
                   container_name: vscode
                   user: "{{ vscode_uid }}:{{ vscode_gid }}"
                   restart: always
@@ -245,8 +261,6 @@
                     - ../data:/home/coder/project
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
-                  environment:
-                    EXTENSIONS_GALLERY: '{{ extensions_gallery_json }}'
             owner: vscode
             group: vscode
             mode: "0644"
