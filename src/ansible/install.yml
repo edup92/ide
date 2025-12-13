@@ -139,8 +139,6 @@
                 "security.workspace.trust.allowedFolders": [
                   "/home/coder/project"
                 ],
-                "chat.disableAIFeatures": true,
-                "chatgpt.openOnStartup": true
               }
             owner: vscode
             group: vscode
@@ -205,7 +203,7 @@
               RUN EXT_DIR="/home/coder/.local/share/code-server/extensions"; \
                 if [ ! -d "$EXT_DIR" ] || [ -z "$(ls -A "$EXT_DIR" 2>/dev/null)" ]; then \
                   echo "Installing VSCode extensions..."; \
-              {% for ext in extensions_open %}
+              {% for ext in extensions %}
                   code-server --install-extension {{ ext }}; \
               {% endfor %}
                 fi
