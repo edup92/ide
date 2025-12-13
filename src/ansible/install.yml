@@ -201,6 +201,13 @@
 
               USER coder
 
+              # Install VS Code extensions at build time (inline)
+              RUN set -euo pipefail; \
+              {% for ext in extensions %}
+                code-server --install-extension {{ ext }}; \
+              {% endfor %}
+                true
+
               EXPOSE 8080
               CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none"]
             owner: vscode
@@ -222,6 +229,7 @@
                     - "80:8080"
                   volumes:
                     - ../data:/home/coder/project
+                    - ../extensions:/home/coder/.local/share/code-server/extensions
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
             owner: vscode
@@ -256,22 +264,3 @@
             enabled: true
             state: restarted
             daemon_reload: true
-
-    - name: Install extensions
-      block:
-        - name: List installed VS Code extensions
-          command: >
-            docker exec
-            --user coder
-            vscode
-            bash -lc "code-server --list-extensions"
-          register: installed_exts
-          changed_when: false
-        - name: Install missing VS Code extensions
-          loop: "{{ extensions }}"
-          when: item not in installed_exts.stdout_lines
-          command: >
-            docker exec
-            --user coder
-            vscode
-            bash -lc "code-server --install-extension {{ item }}"
