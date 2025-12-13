@@ -234,6 +234,11 @@
                     - ../extensions:/home/coder/.local/share/code-server/extensions
                     - ../settings/user.json:/home/coder/.local/share/code-server/User/settings.json
                     - ../pem/github_pem:/home/coder/.ssh/id_ed25519:ro
+                  environment:
+                    EXTENSIONS_GALLERY: >-
+                      {"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery",
+                      "cacheUrl":"https://vscode.blob.core.windows.net/gallery/index",
+                      "itemUrl":"https://marketplace.visualstudio.com/items"}
             owner: vscode
             group: vscode
             mode: "0644"
