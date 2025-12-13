@@ -199,11 +199,11 @@
               && git config --system commit.template /etc/gitmessage
 
               # SSH (system-wide config + known_hosts)
-
               RUN mkdir -p /etc/ssh/ssh_config.d \
                 && ssh-keyscan github.com > /etc/ssh/ssh_known_hosts \
-                && chmod 0644 /etc/ssh/ssh_known_hosts \
-                && cat > /etc/ssh/ssh_config.d/github.conf <<'EOF'
+                && chmod 0644 /etc/ssh/ssh_known_hosts
+
+              RUN cat > /etc/ssh/ssh_config.d/github.conf <<'EOF'
               Host github.com
                 HostName github.com
                 User git
@@ -212,7 +212,8 @@
                 StrictHostKeyChecking accept-new
                 UserKnownHostsFile /etc/ssh/ssh_known_hosts
               EOF
-                && chmod 0644 /etc/ssh/ssh_config.d/github.conf \
+
+              RUN chmod 0644 /etc/ssh/ssh_config.d/github.conf \
                 && mkdir -p /home/coder/.ssh \
                 && chmod 0755 /home/coder/.ssh
 
