@@ -199,22 +199,6 @@
               RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder \
               && chmod 0440 /etc/sudoers.d/coder
 
-              # branding
-
-              RUN base64 -d > /tmp/favicon.ico <<'B64'
-              {{ favicon_ico_b64 | regex_replace('\r','') | trim }}
-              B64
-
-              RUN for d in \
-                    /usr/lib/code-server/src/browser/media \
-                    /usr/lib/code-server/lib/vscode/src/browser/media \
-                    /usr/lib/code-server/lib/vscode/out/vs/code/browser/media \
-                  ; do \
-                    if [ -d "$d" ]; then \
-                      cp /tmp/favicon.ico "$d/favicon.ico"; \
-                    fi; \
-                  done
-
               # Git identity (system-wide)
               RUN git config --system user.name "{{ admin_name }}" \
               && git config --system user.email "{{ admin_email }}"
