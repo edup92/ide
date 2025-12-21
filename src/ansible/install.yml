@@ -125,6 +125,7 @@
             content: |
               {
                 "editor.tabSize": 2,
+                "files.autoSave": "onFocusChange",
                 "editor.insertSpaces": true,
                 "editor.detectIndentation": false,
                 "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -145,7 +146,7 @@
                 "workbench.tree.enableStickyScroll": true,
                 "workbench.view.alwaysShowHeaderActions": false,
                 "window.density.editorTabHeight": "default",
-                "git.autofetch": false,
+                "git.autofetch": true,
                 "git.enableSmartCommit": true,
                 "git.postCommitCommand": "sync",
                 "ansible.python.interpreterPath": "/usr/bin/python3",
