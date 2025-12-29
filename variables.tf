@@ -32,7 +32,7 @@ variable "admin_email" {
 variable "extensions" {
   description = "Github private pem key"
   type        = list(string)
-  default     = ["github.copilot", "gitHub.copilot-chat", "hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"]
+  default     = ["github.copilot", "gitHub.copilot-chat", "github.vscode-github-actions", "hashicorp.terraform", "redhat.ansible", "ms-python.python", "esbenp.prettier-vscode"]
 }
 
 variable "pem_github_base64" {
